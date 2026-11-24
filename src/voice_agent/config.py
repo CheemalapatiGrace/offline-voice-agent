@@ -26,7 +26,7 @@ class Settings:
     llm_backend: str = "mock"  # mock | ollama
     tts_backend: str = "mock"  # mock | system | piper
     ollama_host: str = "http://127.0.0.1:11434"
-    ollama_model: str = "llama3.2"
+    ollama_model: str = "llama3.2:3b"
     ollama_think: str = ""  # "", "false" or a level; only sent when set (thinking-capable models)
     whisper_model: str = "base.en"
     llm_fallback_rules: bool = True  # degrade to the rule-based brain if the primary LLM fails

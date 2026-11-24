@@ -37,3 +37,7 @@ docker:
 
 clean:
 	rm -rf .pytest_cache .ruff_cache data reports
+
+run-local:  ## REAL local models: faster-whisper (base.en) + Ollama llama3.2:3b + macOS `say`; open /mic
+	VA_STT_BACKEND=faster_whisper VA_LLM_BACKEND=ollama VA_OLLAMA_MODEL=llama3.2:3b VA_TTS_BACKEND=system \
+	VA_APPROVAL_TOOLS=cancel_appointment,escalate_to_human VA_APPROVAL_WAIT_S=30 $(PY) -m voice_agent.server

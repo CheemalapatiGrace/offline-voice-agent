@@ -1,0 +1,98 @@
+# Clinic "today" is Monday 2026-03-02. Seed: 1 Alice Wed 10:00, 2 Bob Thu 14:00, 3 Carol Fri 09:30,
+# 4 Dan Tue 11:00, 5/6 Evelyn (Mon 03-09 15:00, Wed 03-11 09:00), 7-9 Frank Tue 09:00/09:30/10:00.
+- id: book_one_shot
+  category: booking
+  turns:
+    - say: "Hi, my name is Grace Hopper, I'd like to book an appointment tomorrow at 2 pm for a checkup"
+      expect:
+        tools: [book_appointment]
+        tool_args: {book_appointment: {patient_name: "Grace Hopper", date: "2026-03-03", time: "14:00"}}
+        reply_any: ["all set", "confirmation number"]
+        no_guard: true
+  final:
+    db: {booked: [{patient: "Grace Hopper", date: "2026-03-03", time: "14:00"}]}
+
+- id: book_multi_turn_slot_filling
+  category: booking
+  turns:
+    - say: "I'd like to book an appointment"
+      expect: {tools: [], reply_any: ["first and last name"]}
+    - say: "Henry Ford"
+      expect: {tools: [], reply_any: ["What day"]}
+    - say: "this Friday"
+      expect: {tools: [check_availability], tool_args: {check_availability: {date: "2026-03-06"}}, reply_any: ["openings"]}
+    - say: "at 11 am please"
+      expect:
+        tools: [book_appointment]
+        tool_args: {book_appointment: {patient_name: "Henry Ford", date: "2026-03-06", time: "11:00"}}
+  final:
+    db: {booked: [{patient: "Henry Ford", date: "2026-03-06", time: "11:00"}]}
+
+- id: book_slot_taken_then_alternative
+  category: booking
+  turns:
+    - say: "My name is Ivy Chen. Book me tomorrow at 10 am"
+      expect: {tools: [book_appointment], tool_statuses: [error], reply_any: ["already taken"]}
+    - say: "10:30 then"
+      expect:
+        tools: [book_appointment]
+        tool_args: {book_appointment: {date: "2026-03-03", time: "10:30"}}
+        tool_statuses: [ok]
+  final:
+    db: {booked: [{patient: "Ivy Chen", date: "2026-03-03", time: "10:30"}]}
+
+- id: availability_query
+  category: booking
+  turns:
+    - say: "What times are available on Wednesday?"
+      expect: {tools: [check_availability], tool_args: {check_availability: {date: "2026-03-04"}}, reply_any: ["openings"]}
+  final:
+    db: {unchanged: true}
+
+- id: book_on_closed_sunday
+  category: booking
+  turns:
+    - say: "Hi, I'm Jack Black, book me for Sunday at 10 am"
+      expect: {tools: [book_appointment], tool_statuses: [error], reply_any: ["closed"]}
+  final:
+    db: {unchanged: true}
+
+- id: book_outside_booking_window
+  category: booking
+  turns:
+    - say: "My name is Kara Singh and I want an appointment on 2026-01-15 at 9 am"
+      expect: {tools: [book_appointment], tool_statuses: [error], reply_any: ["90 days"]}
+  final:
+    db: {unchanged: true}
+
+- id: book_saturday_after_hours
+  category: booking
+  turns:
+    - say: "I'm Liam Stone, please book Saturday at 3 pm"
+      expect: {tools: [book_appointment], tool_statuses: [error], reply_any: ["outside our hours"]}
+  final:
+    db: {unchanged: true}
+
+- id: book_symptom_mention_is_not_medical_advice
+  category: booking
+  description: A caller mentioning a symptom while booking must not trip the medical-advice guard.
+  turns:
+    - say: "I have a headache, can I book an appointment for tomorrow at 3 pm? My name is Leo Park"
+      expect:
+        tools: [book_appointment]
+        tool_args: {book_appointment: {date: "2026-03-03", time: "15:00", reason: "headache"}}
+        no_guard: true
+  final:
+    db: {booked: [{patient: "Leo Park", date: "2026-03-03", time: "15:00"}]}
+
+- id: book_then_faq_then_done
+  category: booking
+  turns:
+    - say: "Hello, I'm Nina Patel and I need an appointment on Thursday at 4 pm"
+      expect: {tools: [book_appointment], tool_statuses: [ok]}
+    - say: "Do you accept Cigna?"
+      expect: {tools: [lookup_faq], reply_any: ["Cigna"]}
+    - say: "Thank you, goodbye"
+      expect: {tools: [], reply_any: ["Goodbye"]}
+  final:
+    db: {booked: [{patient: "Nina Patel", date: "2026-03-05", time: "16:00"}]}

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mic Test</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#2a323d; --text:#e6edf3; --muted:#8b98a5; --accent:#3ddc97; --bad:#ff6b6b; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f6f8; --panel:#fff; --line:#d8dee4; --text:#1f2328; --muted:#5b6672; --accent:#0a8f5c; --bad:#c62828; } }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,sans-serif; display:flex; justify-content:center; padding:16px; }
+  .wrap { width:100%; max-width:640px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
+  button, input { font:inherit; color:var(--text); background:transparent; border:1px solid var(--line); border-radius:6px; padding:8px 12px; }
+  button.primary { background:var(--accent); color:#04130c; border-color:var(--accent); font-weight:600; cursor:pointer; }
+  #log { height:280px; overflow:auto; font-size:14px; }
+  .u { color:#6cb6ff; } .a { color:var(--accent); } .s { color:var(--muted); font-size:12px; }
+  .meter { height:8px; background:var(--line); border-radius:4px; overflow:hidden; } #lvl { height:100%; width:0; background:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Browser mic test <span class="s">(optional)</span></h2>
+  <div class="card">
+    <p class="s">Streams 16 kHz PCM16 from your microphone to <code>/ws/session</code>. With the default mock STT, microphone audio is not transcribed (the mock only decodes synthetic speech) — use the text box below, or run with <code>VA_STT_BACKEND=faster_whisper</code> for real speech recognition. Everything stays on this machine.</p>
+    <button class="primary" id="go">Connect &amp; start mic</button> <button id="stop" disabled>Disconnect</button>
+    <button id="barge" disabled>Interrupt</button>
+    <div class="meter" style="margin-top:10px"><div id="lvl"></div></div>
+    <div class="s" id="state">disconnected</div>
+  </div>
+  <div class="card">
+    <div id="log"></div>
+    <div style="display:flex; gap:8px; margin-top:8px"><input id="txt" style="flex:1" placeholder="…or type what the caller says"><button id="send">Send</button></div>
+  </div>
+  <p class="s"><a href="/dashboard" style="color:var(--accent)">Operator console →</a></p>
+</div>
+<script>
+const $ = (i) => document.getElementById(i);
+let ws, ctx, node, stream, outCtx, nextT = 0, sess = null;
+const log = (cls, t) => { const d = document.createElement('div'); d.className = cls; d.textContent = t; $('log').append(d); $('log').scrollTop = 1e9; };
+function down(f32, from, to) { if (from === to) return f32; const r = from / to, n = Math.floor(f32.length / r), o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = f32[Math.floor(i * r)]; return o; }
+function play(buf, rate) {
+  outCtx ||= new AudioContext(); const i16 = new Int16Array(buf), f = new Float32Array(i16.length);
+  for (let i = 0; i < i16.length; i++) f[i] = i16[i] / 32768;
+  const ab = outCtx.createBuffer(1, f.length, rate); ab.copyToChannel(f, 0); const s = outCtx.createBufferSource(); s.buffer = ab; s.connect(outCtx.destination);
+  nextT = Math.max(nextT, outCtx.currentTime); s.start(nextT); nextT += ab.duration; (play.srcs ||= []).push(s);
+}
+function flush() { (play.srcs || []).forEach(s => { try { s.stop(); } catch (e) {} }); play.srcs = []; nextT = 0; }
+function open() {
+  const q = sess ? `?session_id=${sess.id}&resume_token=${sess.tok}` : '';
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/session${q}`); ws.binaryType = 'arraybuffer';
+  ws.onmessage = (m) => {
+    if (typeof m.data !== 'string') { play(m.data, sess?.out || 16000); return; }
+    const e = JSON.parse(m.data);
+    if (e.type === 'session') { sess = { id: e.session_id, tok: e.resume_token, out: e.output_sample_rate }; $('state').textContent = 'session ' + e.session_id + (e.resumed ? ' (resumed)' : ''); }
+    else if (e.type === 'state') $('state').textContent = 'state: ' + e.state;
+    else if (e.type === 'transcript') log('u', 'you: ' + e.text);
+    else if (e.type === 'reply') log('a', 'agent: ' + e.text);
+    else if (e.type === 'interrupt') { flush(); log('s', '[interrupted]'); }
+    else if (e.type === 'error' || e.type === 'notice') log('s', '[' + (e.code || e.type) + '] ' + (e.message || ''));
+  };
+  ws.onclose = () => { $('state').textContent = 'disconnected (reconnecting if a session exists)'; if (sess && !$('stop').disabled) setTimeout(open, 1000); };
+}
+$('go').onclick = async () => {
+  open(); $('go').disabled = true; $('stop').disabled = false; $('barge').disabled = false;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    ctx = new AudioContext(); const src = ctx.createMediaStreamSource(stream);
+    node = ctx.createScriptProcessor(4096, 1, 1); let carry = new Float32Array(0);
+    node.onaudioprocess = (ev) => {
+      const d = down(ev.inputBuffer.getChannelData(0), ctx.sampleRate, 16000); let m = 0; for (const x of d) m = Math.max(m, Math.abs(x)); $('lvl').style.width = Math.min(100, m * 300) + '%';
+      const all = new Float32Array(carry.length + d.length); all.set(carry); all.set(d, carry.length); const n = Math.floor(all.length / 320) * 320; carry = all.slice(n);
+      if (ws && ws.readyState === 1 && n) { const i16 = new Int16Array(n); for (let i = 0; i < n; i++) i16[i] = Math.max(-1, Math.min(1, all[i])) * 32767; ws.send(i16.buffer); }
+    };
+    src.connect(node); node.connect(ctx.destination);
+  } catch (e) { log('s', 'mic unavailable: ' + e.message + ' — text input still works'); }
+};
+$('stop').onclick = () => { $('stop').disabled = true; $('go').disabled = false; try { ws.send(JSON.stringify({ type: 'close' })); ws.close(); } catch (e) {} stream && stream.getTracks().forEach(t => t.stop()); ctx && ctx.close(); sess = null; };
+$('barge').onclick = () => ws && ws.send(JSON.stringify({ type: 'interrupt' }));
+const send = () => { const t = $('txt').value.trim(); if (t && ws && ws.readyState === 1) { ws.send(JSON.stringify({ type: 'text', text: t })); $('txt').value = ''; } };
+$('send').onclick = send; $('txt').onkeydown = (e) => e.key === 'Enter' && send();
+</script>
+</body>
+</html>

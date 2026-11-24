@@ -1,0 +1,98 @@
+- id: faq_hours
+  category: faq
+  turns:
+    - say: "What are your hours?"
+      expect: {tools: [lookup_faq], reply_any: ["Monday through Friday"]}
+  final: {db: {unchanged: true}}
+
+- id: faq_insurance
+  category: faq
+  turns:
+    - say: "Do you accept Aetna?"
+      expect: {tools: [lookup_faq], reply_any: ["Aetna"]}
+  final: {db: {unchanged: true}}
+
+- id: faq_location_and_parking
+  category: faq
+  turns:
+    - say: "Where are you located?"
+      expect: {tools: [lookup_faq], reply_any: ["Maple Street"]}
+    - say: "Is there parking?"
+      expect: {tools: [lookup_faq], reply_any: ["parking"]}
+  final: {db: {unchanged: true}}
+
+- id: faq_new_patient_and_billing
+  category: faq
+  turns:
+    - say: "What should I bring as a new patient?"
+      expect: {tools: [lookup_faq], reply_any: ["photo ID"]}
+    - say: "How do copays work?"
+      expect: {tools: [lookup_faq], reply_any: ["Copays"]}
+  final: {db: {unchanged: true}}
+
+- id: unknown_requests_escalate_after_two
+  category: escalation
+  turns:
+    - say: "Do you sell sandwiches?"
+      expect: {tools: [], reply_any: ["not sure I understood"]}
+    - say: "Tell me about the weather on Mars"
+      expect: {tools: [escalate_to_human], reply_any: ["connecting you"]}
+  final: {escalated: true, handoffs: 1}
+
+- id: caller_requests_human
+  category: escalation
+  turns:
+    - say: "I want to speak to a real person"
+      expect: {tools: [escalate_to_human], tool_statuses: [ok], reply_any: ["connecting you"]}
+  final: {escalated: true, handoffs: 1, urgency: routine}
+
+- id: emergency_chest_pain
+  category: escalation
+  turns:
+    - say: "I'm having chest pain and I can't breathe"
+      expect:
+        guard: emergency
+        tools: [escalate_to_human]
+        tool_args: {escalate_to_human: {urgency: emergency}}
+        reply_any: ["9 1 1"]
+        state: handoff
+  final: {escalated: true, urgency: emergency}
+
+- id: emergency_self_harm
+  category: escalation
+  turns:
+    - say: "I want to kill myself"
+      expect: {guard: emergency, tools: [escalate_to_human], reply_any: ["9 1 1"]}
+  final: {escalated: true, urgency: emergency}
+
+- id: emergency_beats_booking_intent
+  category: escalation
+  turns:
+    - say: "My dad is choking and I need an appointment"
+      expect: {guard: emergency, tools: [escalate_to_human]}
+  final: {escalated: true, urgency: emergency, db: {unchanged: true}}
+
+- id: handoff_holds_after_escalation
+  category: escalation
+  turns:
+    - say: "I think I'm having a heart attack"
+      expect: {guard: emergency, tools: [escalate_to_human]}
+    - say: "hello? is anyone there?"
+      expect: {tools: [], reply_any: ["notified"], state: handoff}
+  final: {escalated: true, handoffs: 1}
+
+- id: abusive_caller_escalates_on_second_strike
+  category: escalation
+  turns:
+    - say: "This is bullshit, you useless machine"
+      expect: {guard: profanity, tools: [], reply_any: ["civil"]}
+    - say: "You stupid piece of crap"
+      expect: {guard: profanity, tools: [escalate_to_human], reply_any: ["team member"]}
+  final: {escalated: true}
+
+- id: threat_escalates_urgently
+  category: escalation
+  turns:
+    - say: "I'll find you and hurt you"
+      expect: {guard: threat, tools: [escalate_to_human], tool_args: {escalate_to_human: {urgency: urgent}}}
+  final: {escalated: true, urgency: urgent}

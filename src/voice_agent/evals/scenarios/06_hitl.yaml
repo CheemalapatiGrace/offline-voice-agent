@@ -1,0 +1,38 @@
+# Operator approval queue, driven by a simulated human operator.
+- id: approval_cancel_approved_by_operator
+  category: hitl
+  approvals: {tools: [cancel_appointment], operator: approve, wait_s: 5}
+  turns:
+    - say: "I'm Bob Martinez, cancel my appointment"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "yes"
+      expect: {tools: [cancel_appointment], tool_statuses: [ok], reply_any: ["One moment", "has been cancelled"]}
+  final: {db: {status: {2: cancelled}}}
+
+- id: approval_cancel_rejected_by_operator
+  category: hitl
+  approvals: {tools: [cancel_appointment], operator: reject, wait_s: 5}
+  turns:
+    - say: "I'm Bob Martinez, cancel my appointment"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "yes"
+      expect: {tools: [cancel_appointment], tool_statuses: [rejected], reply_any: ["couldn't approve"]}
+  final: {db: {unchanged: true}}
+
+- id: approval_timeout_leaves_action_pending
+  category: hitl
+  approvals: {tools: [cancel_appointment], operator: none, wait_s: 0.2}
+  turns:
+    - say: "I'm Bob Martinez, cancel my appointment"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "yes"
+      expect: {tools: [cancel_appointment], tool_statuses: [pending_approval], reply_any: ["sent that to our staff"]}
+  final: {db: {unchanged: true}}
+
+- id: emergency_escalation_bypasses_approval_queue
+  category: hitl
+  approvals: {tools: [escalate_to_human, cancel_appointment], operator: none, wait_s: 0.2}
+  turns:
+    - say: "I can't breathe"
+      expect: {guard: emergency, tools: [escalate_to_human], tool_statuses: [ok]}
+  final: {escalated: true, urgency: emergency}

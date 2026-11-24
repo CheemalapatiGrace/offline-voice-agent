@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator Console</title>
+<style>
+  :root {
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2a323d; --text:#e6edf3; --muted:#8b98a5;
+    --accent:#3ddc97; --warn:#f2b84b; --bad:#ff6b6b; --info:#6cb6ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f4; --line:#d8dee4; --text:#1f2328; --muted:#5b6672; --accent:#0a8f5c; --warn:#a96b00; --bad:#c62828; --info:#1565c0; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; letter-spacing:.3px; }
+  header .sp { flex:1; }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--bad); display:inline-block; }
+  .dot.on { background:var(--accent); }
+  input, textarea, button { font:inherit; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
+  textarea { width:100%; resize:vertical; }
+  button { cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:var(--accent); color:#04130c; border-color:var(--accent); font-weight:600; }
+  button.danger { color:var(--bad); }
+  main { display:grid; grid-template-columns: 280px 1fr 340px; gap:12px; padding:12px; min-height: calc(100vh - 56px); }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; min-width:0; }
+  section h2 { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:0 0 8px; font-weight:600; }
+  .col { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .sess { padding:8px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer; }
+  .sess.sel { border-color:var(--accent); background:var(--panel2); }
+  .sess .id { font-family:var(--mono); font-size:12px; }
+  .badge { font-size:11px; padding:1px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted); font-family:var(--mono); }
+  .badge.idle { color:var(--muted); } .badge.listening { color:var(--info); border-color:var(--info); }
+  .badge.thinking { color:var(--warn); border-color:var(--warn); } .badge.speaking { color:var(--accent); border-color:var(--accent); }
+  .badge.paused, .badge.takeover { color:#000; background:var(--warn); border-color:var(--warn); }
+  .badge.handoff { color:#fff; background:var(--bad); border-color:var(--bad); } .badge.disconnected { color:var(--bad); border-color:var(--bad); }
+  .transcript { height: 340px; overflow:auto; background:var(--panel2); border-radius:8px; padding:8px; }
+  .msg { margin:0 0 8px; } .msg .who { font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; }
+  .msg.user .who { color:var(--info); } .msg.agent .who { color:var(--accent); } .msg.operator .who { color:var(--warn); }
+  .msg.blocked .t { color:var(--bad); }
+  .card { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:6px; background:var(--panel2); font-size:13px; }
+  .card.pending { border-color:var(--warn); }
+  .mono { font-family:var(--mono); font-size:12px; word-break:break-word; }
+  .muted { color:var(--muted); }
+  .ok { color:var(--accent); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  .list { max-height:230px; overflow:auto; }
+  .bar { height:8px; border-radius:4px; background:var(--info); display:inline-block; vertical-align:middle; min-width:2px; }
+  .bar.stt{background:#c792ea} .bar.llm{background:var(--accent)} .bar.tool{background:var(--warn)} .bar.tts{background:#6cb6ff} .bar.guardrail{background:var(--bad)} .bar.vad{background:#8b98a5}
+  .hint { font-size:12px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; font-size:12px; } td, th { padding:2px 6px; text-align:left; border-bottom:1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="conn"></span>
+  <h1>Voice Agent · Operator Console</h1>
+  <span class="hint" id="status">connecting…</span>
+  <span class="sp"></span>
+  <label class="hint">operator <input id="opname" value="operator" size="10"></label>
+  <label class="hint">token <input id="token" type="password" size="10" placeholder="if required"></label>
+</header>
+<main>
+  <div class="col">
+    <section><h2>Live sessions</h2><div id="sessions"><div class="hint">No sessions yet. Open <a href="/mic" style="color:var(--accent)">/mic</a> or run <code>make sim</code>.</div></div></section>
+    <section><h2>Approval queue</h2><div id="approvals" class="list"><div class="hint">Nothing pending.</div></div>
+      <div class="hint">Sensitive actions (cancellations, escalations) wait here when <code>VA_APPROVAL_TOOLS</code> is set.</div></section>
+  </div>
+
+  <div class="col">
+    <section id="detail">
+      <h2>Session <span id="sel-id" class="mono"></span></h2>
+      <div class="row" style="margin-bottom:8px">
+        <span class="badge" id="sel-state">—</span><span class="hint" id="sel-activity"></span><span class="sp" style="flex:1"></span>
+        <button id="b-pause">Pause agent</button><button id="b-resume">Resume agent</button>
+        <button id="b-take">Take over</button><button id="b-release">Release</button>
+        <label class="hint"><input type="checkbox" id="review"> review replies</label>
+      </div>
+      <div class="transcript" id="transcript"></div>
+      <div id="pending-wrap" style="display:none; margin-top:8px" class="card pending">
+        <div class="hint">Agent's pending reply — edit before it is spoken:</div>
+        <textarea id="pending-text" rows="3"></textarea>
+        <div class="row" style="margin-top:6px"><button class="primary" id="b-release-reply">Speak reply</button><button class="danger" id="b-discard">Discard</button></div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="hint">Operator reply (spoken via TTS; pause or take over first)</div>
+        <div class="row"><input id="say" style="flex:1" placeholder="Type a reply…" maxlength="600"><button class="primary" id="b-say">Speak</button></div>
+      </div>
+    </section>
+    <section><h2>Turn latency (last turns)</h2><div id="latency" class="list"><div class="hint">No turns yet.</div></div></section>
+  </div>
+
+  <div class="col">
+    <section><h2>Tool calls</h2><div id="tools" class="list"><div class="hint">None yet.</div></div></section>
+    <section><h2>Guardrail events</h2><div id="guards" class="list"><div class="hint">None yet.</div></div></section>
+    <section><h2>Audit log</h2><div id="audit" class="list"><div class="hint">No operator actions yet.</div></div></section>
+    <section><h2>Latency p50 / p95 (ms)</h2><div id="stats" class="hint">—</div></section>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const S = { sessions: {}, selected: null, transcripts: {}, tools: {}, guards: {}, turns: {}, approvals: [], audit: [] };
+const hdr = () => ({ 'Content-Type': 'application/json', 'X-Operator': $('opname').value || 'operator', ...($('token').value ? { Authorization: 'Bearer ' + $('token').value } : {}) });
+async function api(path, method = 'GET', body) {
+  const r = await fetch(path, { method, headers: hdr(), body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); alert((j.message || j.detail || r.statusText)); throw new Error(r.statusText); }
+  return r.json();
+}
+const fmtT = (ts) => new Date(ts * 1000).toLocaleTimeString();
+
+function renderSessions() {
+  const box = $('sessions'); box.replaceChildren();
+  const ids = Object.keys(S.sessions);
+  if (!ids.length) { box.append(el('div', 'hint', 'No sessions yet. Open /mic or run make sim.')); return; }
+  for (const id of ids) {
+    const s = S.sessions[id];
+    const d = el('div', 'sess' + (id === S.selected ? ' sel' : ''));
+    const r = el('div', 'row'); r.append(el('span', 'id', id), el('span', 'badge ' + s.state, s.state));
+    if (s.escalated) r.append(el('span', 'badge handoff', 'escalated'));
+    if (s.degraded && s.degraded.length) r.append(el('span', 'badge', 'degraded: ' + s.degraded.join(',')));
+    d.append(r, el('div', 'hint', `turn ${s.turn} · in-q ${s.queues?.audio_in ?? 0} · out-q ${s.queues?.audio_out ?? 0}`));
+    d.onclick = () => select(id); box.append(d);
+  }
+}
+async function select(id) {
+  S.selected = id; renderSessions();
+  try {
+    const d = await api('/api/sessions/' + id);
+    S.transcripts[id] = d.transcript; S.tools[id] = d.tool_calls; S.guards[id] = d.guardrails; S.turns[id] = d.turns; S.sessions[id] = d.snapshot;
+  } catch (e) {}
+  renderDetail();
+}
+function renderDetail() {
+  const id = S.selected, s = S.sessions[id];
+  $('sel-id').textContent = id || '';
+  if (!s) return;
+  const b = $('sel-state'); b.className = 'badge ' + s.state; b.textContent = s.state;
+  $('sel-activity').textContent = s.activity || '';
+  const muted = s.state === 'paused' || s.state === 'takeover';
+  $('b-pause').disabled = muted; $('b-take').disabled = s.state === 'takeover';
+  $('b-resume').disabled = !muted && s.state !== 'handoff'; $('b-release').disabled = s.state !== 'takeover';
+  $('say').disabled = $('b-say').disabled = !(muted || s.state === 'handoff');
+  $('review').checked = !!s.review_replies;
+  const tr = $('transcript'); const atBottom = tr.scrollTop + tr.clientHeight >= tr.scrollHeight - 20; tr.replaceChildren();
+  for (const m of S.transcripts[id] || []) {
+    const d = el('div', 'msg ' + m.role + (m.blocked ? ' blocked' : '')); d.append(el('div', 'who', m.role + (m.operator ? ' · ' + m.operator : '')), el('div', 't', m.text)); tr.append(d);
+  }
+  if (atBottom) tr.scrollTop = tr.scrollHeight;
+  const pw = $('pending-wrap');
+  if (s.pending_reply) { if (pw.style.display === 'none') $('pending-text').value = s.pending_reply.text; pw.style.display = 'block'; } else pw.style.display = 'none';
+  const tl = $('tools'); tl.replaceChildren();
+  const tools = (S.tools[id] || []).slice().reverse();
+  if (!tools.length) tl.append(el('div', 'hint', 'None yet.'));
+  for (const t of tools) {
+    const c = el('div', 'card'); const r = el('div', 'row');
+    r.append(el('b', 'mono', t.name), el('span', 'badge ' + (t.status === 'ok' ? 'speaking' : ''), t.status));
+    c.append(r, el('div', 'mono muted', 'args ' + JSON.stringify(t.args)), el('div', 'mono', 'result ' + JSON.stringify(t.result))); tl.append(c);
+  }
+  const gl = $('guards'); gl.replaceChildren();
+  const gs = (S.guards[id] || []).slice().reverse();
+  if (!gs.length) gl.append(el('div', 'hint', 'None yet.'));
+  for (const g of gs) gl.append(el('div', 'card', `${g.layer}: ${g.category}${g.action ? ' → ' + g.action : ''}${g.tool ? ' (' + g.tool + ')' : ''}`));
+  const lat = $('latency'); lat.replaceChildren();
+  const turns = (S.turns[id] || []).slice(-8).reverse();
+  if (!turns.length) lat.append(el('div', 'hint', 'No turns yet.'));
+  for (const t of turns) {
+    const c = el('div', 'card'); const head = el('div', 'row');
+    head.append(el('b', '', 'turn ' + t.turn_id), el('span', 'hint', `${t.outcome} · TTFA ${t.ttfa_ms ?? '—'} ms · total ${t.total_ms} ms`)); c.append(head);
+    c.append(el('div', 'hint', (t.user_text || '').slice(0, 120)));
+    const bar = el('div', 'mono');
+    for (const sp of t.spans) { const w = Math.max(2, Math.min(220, sp.dur_ms / 2)); const b = el('span', 'bar ' + sp.name); b.style.width = w + 'px'; b.title = sp.name + ' ' + sp.dur_ms + 'ms'; bar.append(b, document.createTextNode(' ' + sp.name + ' ' + Math.round(sp.dur_ms) + 'ms  ')); bar.append(document.createElement('br')); }
+    c.append(bar); lat.append(c);
+  }
+}
+function renderApprovals() {
+  const box = $('approvals'); box.replaceChildren();
+  if (!S.approvals.length) { box.append(el('div', 'hint', 'Nothing pending.')); return; }
+  for (const a of S.approvals) {
+    const c = el('div', 'card pending');
+    c.append(el('div', 'row', ''), el('div', 'mono', `#${a.id} ${a.tool}`), el('div', 'mono muted', 'session ' + a.session_id), el('div', 'mono muted', JSON.stringify(a.args)));
+    const r = el('div', 'row');
+    const ok = el('button', 'primary', 'Approve'); ok.onclick = () => api(`/api/approvals/${a.id}/approve`, 'POST', {}).then(refresh);
+    const no = el('button', 'danger', 'Reject'); no.onclick = () => api(`/api/approvals/${a.id}/reject`, 'POST', {}).then(refresh);
+    r.append(ok, no); c.append(r); box.append(c);
+  }
+}
+function renderAudit() {
+  const box = $('audit'); box.replaceChildren();
+  if (!S.audit.length) { box.append(el('div', 'hint', 'No operator actions yet.')); return; }
+  for (const a of S.audit) box.append(el('div', 'card', `${fmtT(a.ts)} · ${a.operator} · ${a.action}${a.session_id ? ' · ' + a.session_id : ''}`));
+}
+function renderStats(st) {
+  if (!st) return; const box = $('stats'); box.replaceChildren();
+  const t = el('table'); const mk = (n, v) => { const r = el('tr'); r.append(el('td', '', n), el('td', 'mono', v ? `${v.p50} / ${v.p95}` : '—'), el('td', 'hint', v ? 'n=' + v.n : '')); t.append(r); };
+  for (const [n, v] of Object.entries(st.spans || {})) mk(n, v); if (st.ttfa) mk('time-to-first-audio', st.ttfa); box.append(t);
+}
+async function refresh() {
+  try {
+    const [s, a, au, st] = await Promise.all([api('/api/sessions'), api('/api/approvals'), api('/api/audit?limit=30'), api('/api/stats')]);
+    S.sessions = Object.fromEntries(s.sessions.map(x => [x.session_id, x])); S.approvals = a.approvals; S.audit = au.audit;
+    if (!S.selected && s.sessions.length) S.selected = s.sessions[s.sessions.length - 1].session_id;
+    renderSessions(); renderApprovals(); renderAudit(); renderStats(st); renderDetail();
+    if (S.selected && !S.transcripts[S.selected]) select(S.selected);
+  } catch (e) {}
+}
+function onEvent(e) {
+  const id = e.session_id;
+  if (e.type === 'transcript') { (S.transcripts[id] ||= []).push({ role: e.role, text: e.text, operator: e.operator }); }
+  else if (e.type === 'tool_call') { (S.tools[id] ||= []).push(e); }
+  else if (e.type === 'guardrail') { (S.guards[id] ||= []).push(e); }
+  else if (e.type === 'turn_trace') { (S.turns[id] ||= []).push(e.trace); }
+  else if (e.type === 'state' && S.sessions[id]) { S.sessions[id].state = e.state; S.sessions[id].activity = e.activity; }
+  if (['approval_requested', 'approval_decided', 'approval_timeout', 'approval_executed', 'session_opened', 'session_closed', 'pending_reply', 'reply_review_timeout', 'review_mode'].includes(e.type) || e.type === 'operator_action') refresh();
+  renderSessions(); if (id === S.selected) renderDetail();
+}
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws/dashboard?token=${encodeURIComponent($('token').value)}`);
+  ws.onopen = () => { $('conn').classList.add('on'); $('status').textContent = 'live'; };
+  ws.onclose = () => { $('conn').classList.remove('on'); $('status').textContent = 'reconnecting…'; setTimeout(connect, 1500); };
+  ws.onmessage = (m) => { const e = JSON.parse(m.data); if (e.type === 'snapshot') refresh(); else onEvent(e); };
+}
+const act = (path, body) => () => api(`/api/sessions/${S.selected}/${path}`, 'POST', body).then(refresh);
+$('b-pause').onclick = act('pause'); $('b-resume').onclick = act('resume'); $('b-take').onclick = act('takeover'); $('b-release').onclick = act('release');
+$('review').onchange = (e) => api(`/api/sessions/${S.selected}/review`, 'POST', { enabled: e.target.checked }).then(refresh);
+$('b-say').onclick = () => { const t = $('say').value.trim(); if (t) api(`/api/sessions/${S.selected}/say`, 'POST', { text: t }).then(() => { $('say').value = ''; refresh(); }); };
+$('say').onkeydown = (e) => { if (e.key === 'Enter') $('b-say').click(); };
+$('b-release-reply').onclick = () => api(`/api/sessions/${S.selected}/reply/release`, 'POST', { text: $('pending-text').value }).then(refresh);
+$('b-discard').onclick = () => api(`/api/sessions/${S.selected}/reply/discard`, 'POST').then(refresh);
+connect(); refresh(); setInterval(refresh, 2500);
+</script>
+</body>
+</html>

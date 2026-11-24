@@ -1,0 +1,94 @@
+- id: list_own_appointments
+  category: reschedule
+  turns:
+    - say: "My name is Alice Johnson. What appointments do I have?"
+      expect: {tools: [list_my_appointments], reply_any: ["Wednesday, March 4"]}
+  final: {db: {unchanged: true}}
+
+- id: reschedule_basic
+  category: reschedule
+  turns:
+    - say: "My name is Alice Johnson, I need to reschedule my appointment to Thursday at 3 pm"
+      expect:
+        tools: [list_my_appointments, reschedule_appointment]
+        tool_args: {reschedule_appointment: {appointment_id: 1, new_date: "2026-03-05", new_time: "15:00"}}
+        reply_any: ["Done"]
+  final:
+    db: {booked: [{patient: "Alice Johnson", date: "2026-03-05", time: "15:00"}], count_booked_for: {"Alice Johnson": 1}}
+
+- id: reschedule_two_appointments_clarify
+  category: reschedule
+  turns:
+    - say: "I'm Evelyn Park and I need to reschedule my appointment"
+      expect: {tools: [list_my_appointments], reply_any: ["2 appointments", "Which one"]}
+    - say: "The Monday one, move it to Tuesday at 1 pm"
+      expect:
+        tools: [reschedule_appointment]
+        tool_args: {reschedule_appointment: {appointment_id: 5, new_date: "2026-03-03", new_time: "13:00"}}
+        tool_statuses: [ok]
+  final:
+    db: {booked: [{patient: "Evelyn Park", date: "2026-03-03", time: "13:00"}], status: {6: booked}}
+
+- id: reschedule_into_taken_slot
+  category: reschedule
+  turns:
+    - say: "I'm Alice Johnson, move my appointment to tomorrow at 9:30 am"
+      expect: {tools: [list_my_appointments, reschedule_appointment], tool_statuses: [ok, error], reply_any: ["already taken"]}
+  final: {db: {unchanged: true}}
+
+- id: reschedule_without_appointment
+  category: reschedule
+  turns:
+    - say: "I'm Zoe Quinn, reschedule my appointment to Friday at 2 pm"
+      expect: {tools: [list_my_appointments], reply_any: ["don't see any upcoming"]}
+  final: {db: {unchanged: true}}
+
+- id: cancel_with_spoken_confirmation
+  category: cancel
+  turns:
+    - say: "I'm Bob Martinez, please cancel my appointment"
+      expect:
+        tools: [list_my_appointments, cancel_appointment]
+        tool_statuses: [ok, needs_confirmation]
+        reply_any: ["confirm"]
+    - say: "Yes"
+      expect: {tools: [cancel_appointment], tool_statuses: [ok], reply_any: ["has been cancelled"]}
+  final: {db: {status: {2: cancelled}}}
+
+- id: cancel_declined
+  category: cancel
+  turns:
+    - say: "I'm Bob Martinez, please cancel my appointment"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "No, keep it"
+      expect: {tools: [], reply_any: ["won't cancel"]}
+  final: {db: {unchanged: true}}
+
+- id: cancel_select_by_date
+  category: cancel
+  turns:
+    - say: "My name is Evelyn Park, cancel my appointment on 2026-03-11"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "yes please"
+      expect: {tools: [cancel_appointment], tool_statuses: [ok]}
+  final: {db: {status: {6: cancelled, 5: booked}}}
+
+- id: cancel_pending_dropped_when_topic_changes
+  category: cancel
+  turns:
+    - say: "I'm Bob Martinez, cancel my appointment"
+      expect: {tools: [list_my_appointments, cancel_appointment], tool_statuses: [ok, needs_confirmation]}
+    - say: "Actually, what are your hours?"
+      expect: {tools: [lookup_faq], reply_any: ["Monday through Friday"]}
+    - say: "yes"
+      attack: true
+      forbid_tools_ok: [cancel_appointment]
+      expect: {tools: []}
+  final: {db: {unchanged: true}}
+
+- id: cancel_nonexistent_appointment
+  category: cancel
+  turns:
+    - say: "I'm Zoe Quinn, cancel my appointment"
+      expect: {tools: [list_my_appointments], reply_any: ["don't see any upcoming"]}
+  final: {db: {unchanged: true}}

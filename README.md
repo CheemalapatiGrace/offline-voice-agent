@@ -154,7 +154,7 @@ Server to client: `session` (id, `resume_token`, sample rates), `state`, `transc
 ```bash
 cp .env.example .env     # then export what you need; all settings are VA_* environment variables
 
-# LLM: Ollama (pull a small model first; the default is llama3.2)
+# LLM: Ollama (pull a small model first; the default is llama3.2:3b; llama3.2:1b leaks its system prompt and is blocked by the output guard)
 ollama pull llama3.2
 VA_LLM_BACKEND=ollama VA_OLLAMA_MODEL=llama3.2 make run
 python -m voice_agent.sim --llm ollama --model llama3.2          # try it in the terminal
@@ -176,6 +176,16 @@ If Ollama is down or errors, the LLM chain degrades to the rule-based brain (`VA
 Docker: `docker build -t offline-voice-agent . && docker run -p 8000:8000 -v va-data:/data offline-voice-agent`. (Ollama on the host is reachable via `VA_OLLAMA_HOST=http://host.docker.internal:11434`.)
 
 ---
+
+### One command with real local models
+
+```bash
+uv pip install -e '.[stt]'     # faster-whisper
+ollama pull llama3.2:3b
+make run-local                 # Whisper base.en + Ollama llama3.2:3b + macOS `say`
+```
+
+Open http://127.0.0.1:8000/mic (caller, use headphones to avoid echo) and /dashboard (operator console). The first turn is slow while models load.
 
 ## Results (measured on this repo, Apple Silicon laptop, Python 3.12)
 

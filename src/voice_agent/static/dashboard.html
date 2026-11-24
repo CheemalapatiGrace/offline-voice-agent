@@ -3,239 +3,695 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Operator Console</title>
+<meta name="color-scheme" content="light dark">
+<title>Operator console · Front Desk Voice</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e6b73'/%3E%3Cpath d='M7 13v6M12 9v14M17 5v22M22 10v12M26 14v4' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
-  :root {
-    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2a323d; --text:#e6edf3; --muted:#8b98a5;
-    --accent:#3ddc97; --warn:#f2b84b; --bad:#ff6b6b; --info:#6cb6ff;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: light) {
-    :root { --bg:#f4f6f8; --panel:#fff; --panel2:#eef1f4; --line:#d8dee4; --text:#1f2328; --muted:#5b6672; --accent:#0a8f5c; --warn:#a96b00; --bad:#c62828; --info:#1565c0; }
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
-  header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
-  header h1 { font-size:15px; margin:0; letter-spacing:.3px; }
-  header .sp { flex:1; }
-  .dot { width:9px; height:9px; border-radius:50%; background:var(--bad); display:inline-block; }
-  .dot.on { background:var(--accent); }
-  input, textarea, button { font:inherit; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
-  textarea { width:100%; resize:vertical; }
-  button { cursor:pointer; }
-  button:hover:not(:disabled) { border-color:var(--accent); }
-  button:disabled { opacity:.4; cursor:not-allowed; }
-  button.primary { background:var(--accent); color:#04130c; border-color:var(--accent); font-weight:600; }
-  button.danger { color:var(--bad); }
-  main { display:grid; grid-template-columns: 280px 1fr 340px; gap:12px; padding:12px; min-height: calc(100vh - 56px); }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
-  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; min-width:0; }
-  section h2 { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:0 0 8px; font-weight:600; }
-  .col { display:flex; flex-direction:column; gap:12px; min-width:0; }
-  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .sess { padding:8px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer; }
-  .sess.sel { border-color:var(--accent); background:var(--panel2); }
-  .sess .id { font-family:var(--mono); font-size:12px; }
-  .badge { font-size:11px; padding:1px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted); font-family:var(--mono); }
-  .badge.idle { color:var(--muted); } .badge.listening { color:var(--info); border-color:var(--info); }
-  .badge.thinking { color:var(--warn); border-color:var(--warn); } .badge.speaking { color:var(--accent); border-color:var(--accent); }
-  .badge.paused, .badge.takeover { color:#000; background:var(--warn); border-color:var(--warn); }
-  .badge.handoff { color:#fff; background:var(--bad); border-color:var(--bad); } .badge.disconnected { color:var(--bad); border-color:var(--bad); }
-  .transcript { height: 340px; overflow:auto; background:var(--panel2); border-radius:8px; padding:8px; }
-  .msg { margin:0 0 8px; } .msg .who { font-size:11px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; }
-  .msg.user .who { color:var(--info); } .msg.agent .who { color:var(--accent); } .msg.operator .who { color:var(--warn); }
-  .msg.blocked .t { color:var(--bad); }
-  .card { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:6px; background:var(--panel2); font-size:13px; }
-  .card.pending { border-color:var(--warn); }
-  .mono { font-family:var(--mono); font-size:12px; word-break:break-word; }
-  .muted { color:var(--muted); }
-  .ok { color:var(--accent); } .bad { color:var(--bad); } .warn { color:var(--warn); }
-  .list { max-height:230px; overflow:auto; }
-  .bar { height:8px; border-radius:4px; background:var(--info); display:inline-block; vertical-align:middle; min-width:2px; }
-  .bar.stt{background:#c792ea} .bar.llm{background:var(--accent)} .bar.tool{background:var(--warn)} .bar.tts{background:#6cb6ff} .bar.guardrail{background:var(--bad)} .bar.vad{background:#8b98a5}
-  .hint { font-size:12px; color:var(--muted); }
-  table { width:100%; border-collapse:collapse; font-size:12px; } td, th { padding:2px 6px; text-align:left; border-bottom:1px solid var(--line); }
+:root{
+  --bg:#f4f5f7; --surface:#fff; --sunk:#eceef2; --line:#dcdfe5; --line-strong:#c6cbd3;
+  --tx:#161e28; --mut:#566271; --faint:#5f6b7a;
+  --brand:#0e6b73; --brand-hi:#0a5860; --brand-tint:#e2f1f2; --on-brand:#fff;
+  --ok:#1d7a45; --ok-tint:#e3f3ea; --warn:#8f5a00; --warn-tint:#fbefd7; --bad:#b3261e; --bad-tint:#fbe5e3;
+  --hold:#5f43b8; --hold-tint:#ece8f9; --info:#1f5fa8; --info-tint:#e3edf8;
+  --shadow:0 1px 2px rgba(22,30,40,.06),0 8px 24px -12px rgba(22,30,40,.18);
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Iowan Old Style","New York","Charter","Source Serif Pro",Georgia,serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+  color-scheme:light;
+}
+:root[data-theme=dark]{
+  --bg:#0d1216; --surface:#141b21; --sunk:#0a0e11; --line:#25303a; --line-strong:#34414d;
+  --tx:#e6ebf0; --mut:#9aa7b4; --faint:#7d8a97;
+  --brand:#5cc8d0; --brand-hi:#7fd6dc; --brand-tint:#12282b; --on-brand:#06242a;
+  --ok:#5fcb8d; --ok-tint:#12261c; --warn:#e3a33b; --warn-tint:#2a2110; --bad:#f07a72; --bad-tint:#2e1614;
+  --hold:#aa98f2; --hold-tint:#1e1a33; --info:#7db3ec; --info-tint:#11233a;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 28px -14px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 var(--sans);font-variant-numeric:tabular-nums;min-height:100vh}
+::selection{background:var(--brand);color:var(--on-brand)}
+input,textarea,select{caret-color:var(--brand)}
+*{scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:20;background:var(--brand);color:var(--on-brand);padding:8px 14px;border-radius:8px;font-weight:600;text-decoration:none}
+.skip:focus{top:12px}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+svg.i.sm{width:15px;height:15px}
+
+/* shell */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:20px;padding:18px 14px;background:var(--surface);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px;font-weight:650;font-size:15px;letter-spacing:-.01em;line-height:1.2}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;flex:none}
+.mark svg.i{stroke-width:2.2}
+.brand small{display:block;font-weight:400;color:var(--mut);font-size:12px;margin-top:1px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;border-radius:8px;background:none;color:var(--mut);text-align:left;cursor:pointer;transition:background .15s,color .15s}
+.nav button:hover{background:var(--sunk);color:var(--tx)}
+.nav button[aria-current=page]{background:var(--brand-tint);color:var(--brand);font-weight:600}
+.nav .count{margin-left:auto;background:var(--hold);color:#fff;border-radius:999px;padding:0 7px;font-size:11px;font-weight:600;line-height:18px}
+:root[data-theme=dark] .nav .count{color:#14102a}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.access{border:1px solid var(--line);border-radius:10px}
+.access summary{display:flex;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;color:var(--mut);list-style:none;border-radius:10px}
+.access summary::-webkit-details-marker{display:none}
+.access summary b{color:var(--tx);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.access[open] summary{border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.access .body{display:flex;flex-direction:column;gap:10px;padding:10px}
+.tools{display:flex;gap:6px}
+.tools button,.tools a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer;color:var(--mut);font-size:12.5px;text-decoration:none}
+.tools button:hover,.tools a:hover{color:var(--tx);border-color:var(--line-strong)}
+.link-state{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);padding:0 4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.link-state.ok .dot{background:var(--ok)}
+.link-state.down .dot{background:var(--bad)}
+.link-state.wait .dot{background:var(--warn)}
+.link-state.ok .dot{animation:pulse 2.4s infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+main{padding:28px clamp(16px,2.6vw,40px) 64px;min-width:0}
+.page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:20px}
+h1{font:600 clamp(24px,2.4vw,30px)/1.15 var(--serif);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sub{color:var(--mut);margin:6px 0 0;max-width:60ch;text-wrap:pretty}
+h2{font-size:13px;font-weight:650;margin:0}
+h3{margin:0;font-size:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.pad{padding:16px}
+.mut{color:var(--mut)}.faint{color:var(--faint)}
+.mono{font-family:var(--mono);font-size:12.5px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;font-weight:600;transition:background .15s,border-color .15s,transform .1s;white-space:nowrap}
+.btn:hover{border-color:var(--tx)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.primary:hover{background:var(--brand-hi);border-color:var(--brand-hi)}
+.btn.hold{background:var(--hold);border-color:var(--hold);color:#fff}
+:root[data-theme=dark] .btn.hold{color:#14102a}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.btn.danger:hover{background:var(--bad-tint);border-color:var(--bad)}
+.btn.sm{min-height:32px;padding:0 11px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:default;pointer-events:none}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:600;font-size:13px}
+.field small{color:var(--mut)}
+input[type=text],input[type=password],textarea{width:100%;padding:9px 12px;border:1px solid var(--line-strong);border-radius:9px;background:var(--surface);color:var(--tx);font:inherit}
+input:disabled{background:var(--sunk);cursor:not-allowed}
+textarea{min-height:76px;resize:vertical;line-height:1.5}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+.switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:var(--mut);font-size:13px}
+.switch input{appearance:none;width:34px;height:20px;border-radius:999px;background:var(--line-strong);position:relative;margin:0;cursor:pointer;transition:background .2s}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
+.switch input:checked{background:var(--brand)}
+.switch input:checked::after{transform:translateX(14px)}
+.switch input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* status */
+.st{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--sunk);color:var(--mut)}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st.listening,.st.idle{background:var(--brand-tint);color:var(--brand)}
+.st.thinking{background:var(--info-tint);color:var(--info)}
+.st.speaking{background:var(--ok-tint);color:var(--ok)}
+.st.paused{background:var(--warn-tint);color:var(--warn)}
+.st.takeover{background:var(--hold-tint);color:var(--hold)}
+.st.handoff{background:var(--bad-tint);color:var(--bad)}
+.st.disconnected{background:var(--sunk);color:var(--mut)}
+.st.thinking::before,.st.speaking::before,.st.listening::before,.st.idle::before{animation:pulse 1.6s infinite}
+.st.lg{font-size:13.5px;padding:4px 13px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:6px;background:var(--sunk);color:var(--mut);font-size:12px;border:1px solid var(--line);white-space:nowrap}
+.tag.hold{background:var(--hold-tint);color:var(--hold);border-color:transparent}
+.tag.bad{background:var(--bad-tint);color:var(--bad);border-color:transparent}
+.tag.warn{background:var(--warn-tint);color:var(--warn);border-color:transparent}
+.tag.ok{background:var(--ok-tint);color:var(--ok);border-color:transparent}
+
+/* summary numbers */
+.stats{display:flex;flex-wrap:wrap;gap:8px 0}
+.stats div{padding:0 22px 0 0;margin-right:22px;border-right:1px solid var(--line)}
+.stats div:last-child{border:0;margin:0;padding:0}
+.stats b{display:block;font:600 22px/1.2 var(--serif)}
+.stats span{font-size:12.5px;color:var(--mut)}
+
+/* approvals */
+.attn{margin-bottom:20px;border-color:color-mix(in srgb,var(--hold) 50%,var(--line));background:var(--surface)}
+.attn .panel-h{background:var(--hold-tint);border-radius:11px 11px 0 0;color:var(--hold)}
+.attn .panel-h h2{font-size:14px}
+.ap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 20px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:start}
+.ap:last-child{border-bottom:0}
+.ap h3{font:600 17px/1.3 var(--serif);margin:0 0 2px}
+.ap .args{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;margin:10px 0 0;font-size:13px}
+.ap .args dt{color:var(--mut)}.ap .args dd{margin:0;word-break:break-word}
+.ap .acts{display:flex;flex-direction:column;gap:8px;min-width:200px}
+.ap .acts .row{flex-wrap:nowrap}
+.linkish{background:none;border:0;padding:0;color:var(--brand);cursor:pointer;text-decoration:underline;text-underline-offset:3px;font:inherit}
+
+/* calls layout */
+.calls{display:grid;grid-template-columns:268px minmax(0,1fr) 340px;gap:16px;align-items:start}
+.calls>.panel{height:calc(100vh - 230px);min-height:480px;display:flex;flex-direction:column;overflow:hidden}
+.scroll{overflow:auto;min-height:0}
+.list{display:flex;flex-direction:column}
+.call{display:block;width:100%;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer}
+.call:hover{background:var(--sunk)}
+.call[aria-current=true]{background:var(--brand-tint)}
+.call .l1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.call b{font-weight:600}
+.call .l2{color:var(--mut);font-size:12.5px;margin-top:3px}
+.call .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.ended{border-top:1px solid var(--line)}
+.ended summary{padding:10px 14px;cursor:pointer;color:var(--mut)}
+.ended .e{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;color:var(--mut);font-size:12.5px}
+
+.dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.dh .t{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+.dh .t h2{font:600 19px/1.2 var(--serif)}
+.dh .acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.thread{flex:1;min-height:0;overflow:auto;padding:18px 18px 10px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.turn{display:flex;flex-direction:column;gap:4px;max-width:80%}
+.turn.caller{align-self:flex-start}
+.turn.agent,.turn.operator{align-self:flex-end;align-items:flex-end}
+.who{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.bubble{padding:10px 14px;border-radius:14px;font:400 16px/1.55 var(--serif);text-wrap:pretty;overflow-wrap:anywhere}
+.caller .bubble{background:var(--sunk);border-bottom-left-radius:4px}
+.agent .bubble{background:var(--brand-tint);border-bottom-right-radius:4px}
+.operator .bubble{background:var(--hold-tint);border-bottom-right-radius:4px}
+.bubble.blocked{background:var(--bad-tint);color:var(--bad)}
+.ev{align-self:center;max-width:94%}
+.ev summary{display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border-radius:999px;font-size:12.5px;cursor:pointer;list-style:none;border:1px solid var(--line);background:var(--surface);color:var(--mut)}
+.ev summary::-webkit-details-marker{display:none}
+.ev summary:hover{border-color:var(--line-strong);color:var(--tx)}
+.ev.ok summary{background:var(--ok-tint);color:var(--ok);border-color:transparent}
+.ev.hold summary{background:var(--hold-tint);color:var(--hold);border-color:transparent}
+.ev.warn summary{background:var(--warn-tint);color:var(--warn);border-color:transparent}
+.ev.bad summary{background:var(--bad-tint);color:var(--bad);border-color:transparent}
+.ev .b{margin-top:6px;padding:10px 12px;background:var(--sunk);border-radius:8px;font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--tx)}
+.ev .b span{color:var(--mut)}
+.typing{align-self:flex-end;padding:6px 14px;background:var(--info-tint);color:var(--info);border-radius:14px;font-size:13px;font-weight:600}
+.jump{align-self:center;position:sticky;bottom:4px}
+.comp{border-top:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.held{padding:12px;border-radius:10px;background:var(--hold-tint);display:flex;flex-direction:column;gap:8px}
+.held label{font-weight:600;color:var(--hold)}
+.held textarea{font:400 16px/1.55 var(--serif);min-height:70px}
+.say{display:flex;gap:8px;align-items:flex-end}
+.say .field{flex:1}
+.locked-say{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--mut)}
+
+/* inspector */
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.tabs button{padding:11px 10px;border:0;background:none;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;border-radius:0}
+.tabs button:hover{color:var(--tx)}
+.tabs button[aria-selected=true]{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+.tabs .n{margin-left:5px;color:var(--faint);font-weight:400}
+.ti{padding:14px 16px;border-bottom:1px solid var(--line)}
+.ti:last-child{border-bottom:0}
+.ti .h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ti .q{font:italic 400 14.5px/1.4 var(--serif);color:var(--mut);margin:3px 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lane{display:grid;grid-template-columns:62px 1fr 52px;gap:8px;align-items:center;font-size:12px;color:var(--mut);padding:2px 0}
+.lane .tr{height:8px;border-radius:4px;background:var(--sunk);position:relative;overflow:hidden}
+.lane .tr i{position:absolute;top:0;bottom:0;min-width:3px;border-radius:4px;background:var(--brand)}
+.lane .ms{text-align:right;color:var(--tx)}
+.s-vad i{background:var(--faint)!important}.s-stt i{background:var(--info)!important}.s-guardrail i{background:var(--hold)!important}
+.s-llm i{background:var(--brand)!important}.s-tool i{background:var(--warn)!important}.s-tts i{background:var(--ok)!important}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:8px 0 0;font:12px/1.5 var(--mono)}
+.kv dt{color:var(--mut)}.kv dd{margin:0;word-break:break-word}
+.note{font-size:12.5px;color:var(--mut);padding:10px 16px;border-top:1px solid var(--line);margin-top:auto}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-weight:600;font-size:12px;color:var(--mut);padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{text-align:right}
+.tbl-wrap{overflow:auto}
+
+/* empty / banners / toast */
+.empty{display:grid;justify-items:center;text-align:center;gap:8px;padding:44px 20px;color:var(--mut)}
+.empty h3{color:var(--tx);font:600 18px var(--serif)}
+.empty p{margin:0;max-width:46ch;text-wrap:pretty}
+.empty .row{justify-content:center;margin-top:8px}
+code{font:12.5px var(--mono);background:var(--sunk);padding:1px 6px;border-radius:5px}
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;font-weight:500;margin-bottom:16px}
+.banner.warn{background:var(--warn-tint);color:var(--warn)}
+.banner.bad{background:var(--bad-tint);color:var(--bad)}
+.banner .btn{margin-left:auto}
+.auth{max-width:440px;margin:6vh auto;padding:28px}
+.auth h1{font-size:24px;margin:16px 0 6px}
+.err{color:var(--bad);font-size:13px;min-height:1.4em}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.3s var(--ease);box-shadow:var(--shadow);z-index:30;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:var(--bad);color:#fff}
+
+@media (max-width:1240px){
+  .calls{grid-template-columns:260px minmax(0,1fr)}
+  .calls>.insp{grid-column:1/-1;height:auto;min-height:0;max-height:520px}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px 12px;gap:10px 12px;border-right:0;border-bottom:1px solid var(--line)}
+  .nav{flex-direction:row;overflow:auto;order:3;width:100%;padding-bottom:2px}
+  .nav button{white-space:nowrap}
+  .side-foot{margin:0 0 0 auto;flex-direction:row;align-items:center;position:relative}
+  .access .body{position:absolute;right:0;top:100%;width:min(300px,86vw);background:var(--surface);border:1px solid var(--line);border-radius:0 0 10px 10px;z-index:15;box-shadow:var(--shadow)}
+  .access summary .grow,.link-state span{display:none}
+  .tools a span{display:none}
+  main{padding-top:18px}
+  .calls{grid-template-columns:1fr}
+  .calls>.panel{height:auto;min-height:0}
+  .calls>.lst{max-height:none}
+  .lst .list{flex-direction:row;overflow:auto}
+  .lst .call{min-width:220px;border-bottom:0;border-right:1px solid var(--line)}
+  .lst .ended{display:none}
+  .thread{max-height:62vh;min-height:300px}
+  .turn{max-width:92%}
+  .ap{grid-template-columns:1fr}
+  .ap .acts{min-width:0}
+  .calls>.insp{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<header>
-  <span class="dot" id="conn"></span>
-  <h1>Voice Agent · Operator Console</h1>
-  <span class="hint" id="status">connecting…</span>
-  <span class="sp"></span>
-  <label class="hint">operator <input id="opname" value="operator" size="10"></label>
-  <label class="hint">token <input id="token" type="password" size="10" placeholder="if required"></label>
-</header>
-<main>
-  <div class="col">
-    <section><h2>Live sessions</h2><div id="sessions"><div class="hint">No sessions yet. Open <a href="/mic" style="color:var(--accent)">/mic</a> or run <code>make sim</code>.</div></div></section>
-    <section><h2>Approval queue</h2><div id="approvals" class="list"><div class="hint">Nothing pending.</div></div>
-      <div class="hint">Sensitive actions (cancellations, escalations) wait here when <code>VA_APPROVAL_TOOLS</code> is set.</div></section>
-  </div>
-
-  <div class="col">
-    <section id="detail">
-      <h2>Session <span id="sel-id" class="mono"></span></h2>
-      <div class="row" style="margin-bottom:8px">
-        <span class="badge" id="sel-state">—</span><span class="hint" id="sel-activity"></span><span class="sp" style="flex:1"></span>
-        <button id="b-pause">Pause agent</button><button id="b-resume">Resume agent</button>
-        <button id="b-take">Take over</button><button id="b-release">Release</button>
-        <label class="hint"><input type="checkbox" id="review"> review replies</label>
-      </div>
-      <div class="transcript" id="transcript"></div>
-      <div id="pending-wrap" style="display:none; margin-top:8px" class="card pending">
-        <div class="hint">Agent's pending reply — edit before it is spoken:</div>
-        <textarea id="pending-text" rows="3"></textarea>
-        <div class="row" style="margin-top:6px"><button class="primary" id="b-release-reply">Speak reply</button><button class="danger" id="b-discard">Discard</button></div>
-      </div>
-      <div style="margin-top:8px">
-        <div class="hint">Operator reply (spoken via TTS; pause or take over first)</div>
-        <div class="row"><input id="say" style="flex:1" placeholder="Type a reply…" maxlength="600"><button class="primary" id="b-say">Speak</button></div>
-      </div>
-    </section>
-    <section><h2>Turn latency (last turns)</h2><div id="latency" class="list"><div class="hint">No turns yet.</div></div></section>
-  </div>
-
-  <div class="col">
-    <section><h2>Tool calls</h2><div id="tools" class="list"><div class="hint">None yet.</div></div></section>
-    <section><h2>Guardrail events</h2><div id="guards" class="list"><div class="hint">None yet.</div></div></section>
-    <section><h2>Audit log</h2><div id="audit" class="list"><div class="hint">No operator actions yet.</div></div></section>
-    <section><h2>Latency p50 / p95 (ms)</h2><div id="stats" class="hint">—</div></section>
-  </div>
-</main>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.500 1.500a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/></symbol>
+    <symbol id="i-review" viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="3" width="16" height="18" rx="2.500"/></symbol>
+    <symbol id="i-handoff" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.500"/><path d="M3 20a6 6 0 0112 0M17 7h4m0 0l-2-2m2 2l-2 2"/></symbol>
+    <symbol id="i-audit" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.500-3.300 7.800-8 9-4.700-1.200-8-4.500-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-trace" viewBox="0 0 24 24"><path d="M3 12h4l2.500-7 5 14L17 12h4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.600 5.600L7 7M17 17l1.400 1.400M5.600 18.400L7 17M17 7l1.400-1.400"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.500A8 8 0 019.500 4 8 8 0 1020 14.500z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.500"/><path d="M5 20a7 7 0 0114 0"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></symbol>
+    <symbol id="i-headset" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0116 0v2M4 14h3v5H5a1 1 0 01-1-1zM20 14h-3v5h2a1 1 0 001-1z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.500-3.300 7.800-8 9-4.700-1.200-8-4.500-8-9V6z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-8-8-4z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></symbol>
+  </defs>
+</svg>
+<a class="skip" href="#main">Skip to main content</a>
+<div id="app" class="app"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-const $ = (id) => document.getElementById(id);
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
-const S = { sessions: {}, selected: null, transcripts: {}, tools: {}, guards: {}, turns: {}, approvals: [], audit: [] };
-const hdr = () => ({ 'Content-Type': 'application/json', 'X-Operator': $('opname').value || 'operator', ...($('token').value ? { Authorization: 'Bearer ' + $('token').value } : {}) });
-async function api(path, method = 'GET', body) {
-  const r = await fetch(path, { method, headers: hdr(), body: body ? JSON.stringify(body) : undefined });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); alert((j.message || j.detail || r.statusText)); throw new Error(r.statusText); }
-  return r.json();
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const SVGNS = "http://www.w3.org/2000/svg";
+function h(tag, attrs, ...kids) {            // text only ever goes through text nodes: transcripts are untrusted
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else if (v === true) el.setAttribute(k, "");
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return el;
 }
-const fmtT = (ts) => new Date(ts * 1000).toLocaleTimeString();
+const icon = (n, cls = "") => { const s = document.createElementNS(SVGNS, "svg"); s.setAttribute("class", "i " + cls); s.setAttribute("aria-hidden", "true"); const u = document.createElementNS(SVGNS, "use"); u.setAttribute("href", "#i-" + n); s.append(u); return s; };
+const store = {
+  get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+  sget: (k) => { try { return sessionStorage.getItem(k) || ""; } catch (e) { return ""; } },
+  sset: (k, v) => { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch (e) {} },
+};
+function setTheme(t) { document.documentElement.dataset.theme = t; store.set("fdv_theme", t); }
+setTheme(store.get("fdv_theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
 
-function renderSessions() {
-  const box = $('sessions'); box.replaceChildren();
-  const ids = Object.keys(S.sessions);
-  if (!ids.length) { box.append(el('div', 'hint', 'No sessions yet. Open /mic or run make sim.')); return; }
-  for (const id of ids) {
-    const s = S.sessions[id];
-    const d = el('div', 'sess' + (id === S.selected ? ' sel' : ''));
-    const r = el('div', 'row'); r.append(el('span', 'id', id), el('span', 'badge ' + s.state, s.state));
-    if (s.escalated) r.append(el('span', 'badge handoff', 'escalated'));
-    if (s.degraded && s.degraded.length) r.append(el('span', 'badge', 'degraded: ' + s.degraded.join(',')));
-    d.append(r, el('div', 'hint', `turn ${s.turn} · in-q ${s.queues?.audio_in ?? 0} · out-q ${s.queues?.audio_out ?? 0}`));
-    d.onclick = () => select(id); box.append(d);
-  }
+/* ---------- vocabulary ---------- */
+const STATE = { idle: "Listening", listening: "Listening", thinking: "Thinking", speaking: "Speaking", paused: "Paused", takeover: "Human takeover", handoff: "Handed off", disconnected: "Caller disconnected" };
+const humanise = (s) => { const t = String(s || "").replaceAll("_", " ").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
+const TOOL = { cancel_appointment: "Cancel appointment", escalate_to_human: "Hand off to a person", book_appointment: "Book appointment", reschedule_appointment: "Reschedule appointment", check_availability: "Check availability", list_my_appointments: "List caller's appointments", lookup_faq: "Look up clinic info" };
+const toolName = (t) => TOOL[t] || humanise(t);
+const TOOL_STATUS = { ok: ["Done", "ok"], pending_approval: ["Waiting for approval", "hold"], needs_confirmation: ["Waiting for caller to confirm", "warn"], denied: ["Denied", "bad"], rejected: ["Rejected", "bad"], error: ["Failed", "bad"], timeout: ["Timed out", "bad"] };
+const toolStatus = (s) => TOOL_STATUS[s] || [humanise(s), "bad"];
+const ACTION = { pause: "Paused the agent", resume_agent: "Resumed the agent", takeover: "Took over the call", release_takeover: "Gave the call back to the agent", say: "Spoke to the caller", set_review: "Changed reply review", release_reply: "Released a held reply", discard_reply: "Discarded a held reply", approve: "Approved an action", reject: "Rejected an action" };
+const STAGE = { vad: "VAD", stt: "STT", guardrail: "Guardrail", llm: "LLM", tool: "Tool", tts: "TTS" };
+const STAGES = ["vad", "stt", "guardrail", "llm", "tool", "tts"];
+const shortId = (id) => String(id || "").slice(0, 8);
+const ms = (n) => n == null ? "n/a" : n < 1000 ? Math.round(n) + " ms" : (n / 1000).toFixed(1) + " s";
+const clock = (sec) => sec ? new Date(sec * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+const clockIso = (iso) => { const d = new Date(String(iso || "").replace(" ", "T") + "Z"); return isNaN(d) ? String(iso || "") : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+const val = (v) => typeof v === "object" && v !== null ? JSON.stringify(v) : String(v);
+
+/* ---------- state ---------- */
+const S = {
+  name: store.get("fdv_operator", "operator"), token: store.sget("fdv_token"), view: "calls", tab: "timing",
+  link: "wait", auth: "ok", error: "",
+  sessions: [], closed: [], mgr: null, perf: null, approvals: [], history: [], audit: [], handoffs: [],
+  selected: null, detail: {}, say: {}, held: {}, notes: {}, open: new Set(), accessOpen: false, focusSay: false, stick: true,
+};
+const byId = (id) => S.sessions.find((x) => x.session_id === id);
+const needsYou = (s) => S.approvals.some((a) => a.session_id === s.session_id) || !!s.pending_reply || s.state === "handoff" || !!s.escalated;
+
+async function api(path, method = "GET", body) {
+  const headers = { "Content-Type": "application/json", "X-Operator": S.name || "operator" };
+  if (S.token) headers.Authorization = "Bearer " + S.token;
+  let r;
+  try { r = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { const err = new Error("Can't reach the server."); err.network = true; throw err; }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const err = new Error(j.message || (typeof j.detail === "string" ? j.detail : r.statusText)); err.status = r.status; throw err; }
+  return j;
 }
-async function select(id) {
-  S.selected = id; renderSessions();
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast on" + (bad ? " bad" : ""); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), bad ? 4200 : 2400); }
+async function act(path, method, body, okMsg) {
+  try { const r = await api(path, method, body); if (okMsg) toast(okMsg); await refresh(); return r; }
+  catch (e) { if (e.status === 401) { S.auth = "needed"; paint(); } else toast(e.message, true); return null; }
+}
+const later = (() => { const t = {}; return (k, fn, d = 120) => { clearTimeout(t[k]); t[k] = setTimeout(fn, d); }; })();
+
+/* ---------- data ---------- */
+async function loadDetail(id) {
   try {
-    const d = await api('/api/sessions/' + id);
-    S.transcripts[id] = d.transcript; S.tools[id] = d.tool_calls; S.guards[id] = d.guardrails; S.turns[id] = d.turns; S.sessions[id] = d.snapshot;
-  } catch (e) {}
-  renderDetail();
-}
-function renderDetail() {
-  const id = S.selected, s = S.sessions[id];
-  $('sel-id').textContent = id || '';
-  if (!s) return;
-  const b = $('sel-state'); b.className = 'badge ' + s.state; b.textContent = s.state;
-  $('sel-activity').textContent = s.activity || '';
-  const muted = s.state === 'paused' || s.state === 'takeover';
-  $('b-pause').disabled = muted; $('b-take').disabled = s.state === 'takeover';
-  $('b-resume').disabled = !muted && s.state !== 'handoff'; $('b-release').disabled = s.state !== 'takeover';
-  $('say').disabled = $('b-say').disabled = !(muted || s.state === 'handoff');
-  $('review').checked = !!s.review_replies;
-  const tr = $('transcript'); const atBottom = tr.scrollTop + tr.clientHeight >= tr.scrollHeight - 20; tr.replaceChildren();
-  for (const m of S.transcripts[id] || []) {
-    const d = el('div', 'msg ' + m.role + (m.blocked ? ' blocked' : '')); d.append(el('div', 'who', m.role + (m.operator ? ' · ' + m.operator : '')), el('div', 't', m.text)); tr.append(d);
-  }
-  if (atBottom) tr.scrollTop = tr.scrollHeight;
-  const pw = $('pending-wrap');
-  if (s.pending_reply) { if (pw.style.display === 'none') $('pending-text').value = s.pending_reply.text; pw.style.display = 'block'; } else pw.style.display = 'none';
-  const tl = $('tools'); tl.replaceChildren();
-  const tools = (S.tools[id] || []).slice().reverse();
-  if (!tools.length) tl.append(el('div', 'hint', 'None yet.'));
-  for (const t of tools) {
-    const c = el('div', 'card'); const r = el('div', 'row');
-    r.append(el('b', 'mono', t.name), el('span', 'badge ' + (t.status === 'ok' ? 'speaking' : ''), t.status));
-    c.append(r, el('div', 'mono muted', 'args ' + JSON.stringify(t.args)), el('div', 'mono', 'result ' + JSON.stringify(t.result))); tl.append(c);
-  }
-  const gl = $('guards'); gl.replaceChildren();
-  const gs = (S.guards[id] || []).slice().reverse();
-  if (!gs.length) gl.append(el('div', 'hint', 'None yet.'));
-  for (const g of gs) gl.append(el('div', 'card', `${g.layer}: ${g.category}${g.action ? ' → ' + g.action : ''}${g.tool ? ' (' + g.tool + ')' : ''}`));
-  const lat = $('latency'); lat.replaceChildren();
-  const turns = (S.turns[id] || []).slice(-8).reverse();
-  if (!turns.length) lat.append(el('div', 'hint', 'No turns yet.'));
-  for (const t of turns) {
-    const c = el('div', 'card'); const head = el('div', 'row');
-    head.append(el('b', '', 'turn ' + t.turn_id), el('span', 'hint', `${t.outcome} · TTFA ${t.ttfa_ms ?? '—'} ms · total ${t.total_ms} ms`)); c.append(head);
-    c.append(el('div', 'hint', (t.user_text || '').slice(0, 120)));
-    const bar = el('div', 'mono');
-    for (const sp of t.spans) { const w = Math.max(2, Math.min(220, sp.dur_ms / 2)); const b = el('span', 'bar ' + sp.name); b.style.width = w + 'px'; b.title = sp.name + ' ' + sp.dur_ms + 'ms'; bar.append(b, document.createTextNode(' ' + sp.name + ' ' + Math.round(sp.dur_ms) + 'ms  ')); bar.append(document.createElement('br')); }
-    c.append(bar); lat.append(c);
-  }
-}
-function renderApprovals() {
-  const box = $('approvals'); box.replaceChildren();
-  if (!S.approvals.length) { box.append(el('div', 'hint', 'Nothing pending.')); return; }
-  for (const a of S.approvals) {
-    const c = el('div', 'card pending');
-    c.append(el('div', 'row', ''), el('div', 'mono', `#${a.id} ${a.tool}`), el('div', 'mono muted', 'session ' + a.session_id), el('div', 'mono muted', JSON.stringify(a.args)));
-    const r = el('div', 'row');
-    const ok = el('button', 'primary', 'Approve'); ok.onclick = () => api(`/api/approvals/${a.id}/approve`, 'POST', {}).then(refresh);
-    const no = el('button', 'danger', 'Reject'); no.onclick = () => api(`/api/approvals/${a.id}/reject`, 'POST', {}).then(refresh);
-    r.append(ok, no); c.append(r); box.append(c);
-  }
-}
-function renderAudit() {
-  const box = $('audit'); box.replaceChildren();
-  if (!S.audit.length) { box.append(el('div', 'hint', 'No operator actions yet.')); return; }
-  for (const a of S.audit) box.append(el('div', 'card', `${fmtT(a.ts)} · ${a.operator} · ${a.action}${a.session_id ? ' · ' + a.session_id : ''}`));
-}
-function renderStats(st) {
-  if (!st) return; const box = $('stats'); box.replaceChildren();
-  const t = el('table'); const mk = (n, v) => { const r = el('tr'); r.append(el('td', '', n), el('td', 'mono', v ? `${v.p50} / ${v.p95}` : '—'), el('td', 'hint', v ? 'n=' + v.n : '')); t.append(r); };
-  for (const [n, v] of Object.entries(st.spans || {})) mk(n, v); if (st.ttfa) mk('time-to-first-audio', st.ttfa); box.append(t);
+    const d = await api("/api/sessions/" + id);
+    S.detail[id] = d;
+    const i = S.sessions.findIndex((x) => x.session_id === id);
+    if (i >= 0) S.sessions[i] = { ...S.sessions[i], ...d.snapshot };
+  } catch (e) { if (e.status === 404) delete S.detail[id]; }
 }
 async function refresh() {
   try {
-    const [s, a, au, st] = await Promise.all([api('/api/sessions'), api('/api/approvals'), api('/api/audit?limit=30'), api('/api/stats')]);
-    S.sessions = Object.fromEntries(s.sessions.map(x => [x.session_id, x])); S.approvals = a.approvals; S.audit = au.audit;
-    if (!S.selected && s.sessions.length) S.selected = s.sessions[s.sessions.length - 1].session_id;
-    renderSessions(); renderApprovals(); renderAudit(); renderStats(st); renderDetail();
-    if (S.selected && !S.transcripts[S.selected]) select(S.selected);
-  } catch (e) {}
+    const [s, a, au, st, ho] = await Promise.all([api("/api/sessions"), api("/api/approvals"), api("/api/audit?limit=60"), api("/api/stats"), api("/api/handoffs")]);
+    S.auth = "ok"; S.error = "";
+    S.sessions = s.sessions; S.closed = (s.closed || []).slice().reverse(); S.mgr = s.stats; S.approvals = a.approvals.slice().reverse(); S.audit = au.audit; S.perf = st; S.handoffs = ho.handoffs.slice().reverse();
+    if (S.view === "approvals") S.history = (await api("/api/approvals?status=all")).approvals.filter((x) => x.status !== "pending");
+    if (!S.selected || !byId(S.selected)) S.selected = [...S.sessions].sort(rank)[0]?.session_id || null;
+    if (S.selected) await loadDetail(S.selected);
+    if (S.link !== "ok" && S.link !== "wait") connect(true);
+  } catch (e) {
+    if (e.status === 401) S.auth = "needed"; else S.error = e.message;
+  }
+  paint();
+}
+const rank = (a, b) => (needsYou(b) - needsYou(a)) || ((b.created_at || 0) - (a.created_at || 0));
+
+/* ---------- live socket ---------- */
+let ws, wsTimer, wsTries = 0;
+function connect(force) {
+  if (ws && !force && ws.readyState <= 1) return;
+  try { ws && ws.close(); } catch (e) {}
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws/dashboard?token=${encodeURIComponent(S.token)}`);
+  ws.onopen = () => { wsTries = 0; S.link = "ok"; paintSide(); };
+  ws.onclose = () => { S.link = wsTries > 2 ? "down" : "wait"; wsTries++; paintSide(); clearTimeout(wsTimer); wsTimer = setTimeout(() => connect(true), Math.min(1500 * wsTries, 8000)); };
+  ws.onmessage = (m) => { const e = JSON.parse(m.data); if (e.type === "snapshot") refresh(); else onEvent(e); };
 }
 function onEvent(e) {
   const id = e.session_id;
-  if (e.type === 'transcript') { (S.transcripts[id] ||= []).push({ role: e.role, text: e.text, operator: e.operator }); }
-  else if (e.type === 'tool_call') { (S.tools[id] ||= []).push(e); }
-  else if (e.type === 'guardrail') { (S.guards[id] ||= []).push(e); }
-  else if (e.type === 'turn_trace') { (S.turns[id] ||= []).push(e.trace); }
-  else if (e.type === 'state' && S.sessions[id]) { S.sessions[id].state = e.state; S.sessions[id].activity = e.activity; }
-  if (['approval_requested', 'approval_decided', 'approval_timeout', 'approval_executed', 'session_opened', 'session_closed', 'pending_reply', 'reply_review_timeout', 'review_mode'].includes(e.type) || e.type === 'operator_action') refresh();
-  renderSessions(); if (id === S.selected) renderDetail();
+  if (e.type === "state") { const s = byId(id); if (s) { s.state = e.state; s.activity = e.activity; paint(); } }
+  if (id && id === S.selected && ["transcript", "tool_call", "guardrail", "turn_trace", "pending_reply", "state", "operator_action"].includes(e.type)) later("detail", () => loadDetail(id).then(() => paint()), 100);
+  if (["approval_requested", "approval_decided", "approval_timeout", "approval_executed", "session_opened", "session_closed", "session_disconnected", "session_resumed", "pending_reply", "reply_review_timeout", "review_mode", "operator_action"].includes(e.type)) later("refresh", refresh, 100);
 }
-function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const ws = new WebSocket(`${proto}://${location.host}/ws/dashboard?token=${encodeURIComponent($('token').value)}`);
-  ws.onopen = () => { $('conn').classList.add('on'); $('status').textContent = 'live'; };
-  ws.onclose = () => { $('conn').classList.remove('on'); $('status').textContent = 'reconnecting…'; setTimeout(connect, 1500); };
-  ws.onmessage = (m) => { const e = JSON.parse(m.data); if (e.type === 'snapshot') refresh(); else onEvent(e); };
+
+/* ---------- paint helpers ---------- */
+function keepFocus(fn) {
+  const a = document.activeElement, key = a && a.dataset && a.dataset.keep;
+  const sel = key && a.selectionStart != null ? [a.selectionStart, a.selectionEnd] : null;
+  const th = $("[data-scroll=thread]"), thread = th && { top: th.scrollTop, bottom: th.scrollTop + th.clientHeight >= th.scrollHeight - 40, id: th.dataset.call };
+  const scrolls = {}; document.querySelectorAll("[data-scroll]").forEach((n) => { if (n.dataset.scroll !== "thread") scrolls[n.dataset.scroll] = n.scrollTop; });
+  fn();
+  document.querySelectorAll("[data-scroll]").forEach((n) => { if (n.dataset.scroll in scrolls) n.scrollTop = scrolls[n.dataset.scroll]; });
+  const nt = $("[data-scroll=thread]");
+  if (nt) { nt.style.scrollBehavior = "auto"; nt.scrollTop = !thread || thread.id !== nt.dataset.call || thread.bottom ? nt.scrollHeight : thread.top; nt.style.scrollBehavior = ""; }
+  if (S.focusSay) { S.focusSay = false; $("[data-keep=say]")?.focus(); }
+  else if (key) { const n = document.querySelector(`[data-keep="${key}"]`); if (n) { n.focus({ preventScroll: true }); if (sel && n.setSelectionRange) try { n.setSelectionRange(...sel); } catch (e) {} } }
 }
-const act = (path, body) => () => api(`/api/sessions/${S.selected}/${path}`, 'POST', body).then(refresh);
-$('b-pause').onclick = act('pause'); $('b-resume').onclick = act('resume'); $('b-take').onclick = act('takeover'); $('b-release').onclick = act('release');
-$('review').onchange = (e) => api(`/api/sessions/${S.selected}/review`, 'POST', { enabled: e.target.checked }).then(refresh);
-$('b-say').onclick = () => { const t = $('say').value.trim(); if (t) api(`/api/sessions/${S.selected}/say`, 'POST', { text: t }).then(() => { $('say').value = ''; refresh(); }); };
-$('say').onkeydown = (e) => { if (e.key === 'Enter') $('b-say').click(); };
-$('b-release-reply').onclick = () => api(`/api/sessions/${S.selected}/reply/release`, 'POST', { text: $('pending-text').value }).then(refresh);
-$('b-discard').onclick = () => api(`/api/sessions/${S.selected}/reply/discard`, 'POST').then(refresh);
-connect(); refresh(); setInterval(refresh, 2500);
+let sigSide = "", sigMain = "";
+function paint() { paintSide(); paintMain(); const n = S.approvals.length; document.title = (n ? `(${n}) ` : "") + "Operator console · Front Desk Voice"; }
+
+/* ---------- sidebar ---------- */
+const NAV = [["calls", "Live calls", "phone"], ["approvals", "Approvals", "review"], ["handoffs", "Handoffs", "handoff"], ["audit", "Audit log", "audit"], ["perf", "Performance", "trace"]];
+const LINK = { ok: "Live", wait: "Reconnecting", down: "Offline" };
+function paintSide() {
+  const sig = [S.view, S.approvals.length, S.link, S.accessOpen, document.documentElement.dataset.theme, S.auth].join("|");
+  if (sig === sigSide && $(".side")) return; sigSide = sig;
+  let side = $(".side");
+  const nav = h("nav", { class: "nav", "aria-label": "Sections" }, NAV.map(([id, label, ic]) =>
+    h("button", { "data-keep": "nav-" + id, "aria-current": S.view === id ? "page" : null, onclick: () => { S.view = id; refresh(); } }, icon(ic), label,
+      id === "approvals" && S.approvals.length ? h("span", { class: "count", "aria-label": S.approvals.length + " waiting" }, S.approvals.length) : null)));
+  const dark = document.documentElement.dataset.theme === "dark";
+  const nameIn = h("input", { type: "text", id: "opname", "data-keep": "opname", value: S.name, maxlength: "40", autocomplete: "off", oninput: (e) => { S.name = e.target.value.trim() || "operator"; store.set("fdv_operator", S.name); } });
+  const tokIn = h("input", { type: "password", id: "optok", "data-keep": "optok", value: S.token, autocomplete: "off", placeholder: "Only if your server needs one", onchange: (e) => setToken(e.target.value.trim()) });
+  const access = h("details", { class: "access", open: S.accessOpen, ontoggle: (e) => { S.accessOpen = e.target.open; sigSide = ""; } },
+    h("summary", { "aria-label": "Signed in as " + S.name + ". Edit name and token" }, icon("user"), h("span", { class: "grow clip" }, "Signed in as ", h("b", {}, S.name))),
+    h("div", { class: "body" },
+      h("div", { class: "field" }, h("label", { for: "opname" }, "Your name"), nameIn, h("small", {}, "Shown in the audit log.")),
+      h("div", { class: "field" }, h("label", { for: "optok" }, "Access token"), tokIn)));
+  const content = [
+    h("div", { class: "brand" }, h("div", { class: "mark" }, icon("wave")), h("div", {}, "Front Desk Voice", h("small", {}, "Operator console"))),
+    nav,
+    h("div", { class: "side-foot" },
+      h("div", { class: "link-state " + S.link, role: "status" }, h("span", { class: "dot" }), h("span", {}, LINK[S.link] + (S.link === "ok" ? " updates" : ""))),
+      access,
+      h("div", { class: "tools" },
+        h("a", { href: "/mic", target: "_blank", rel: "noopener", title: "Open the caller page in a new tab" }, icon("ext", "sm"), h("span", {}, "Caller page")),
+        h("button", { "data-keep": "theme", onclick: () => { setTheme(dark ? "light" : "dark"); paint(); }, "aria-label": dark ? "Switch to light theme" : "Switch to dark theme", title: "Toggle theme" }, icon(dark ? "sun" : "moon")))),
+  ];
+  if (!side) { side = h("aside", { class: "side" }); $("#app").prepend(side); }
+  keepFocus(() => side.replaceChildren(...content));
+}
+function setToken(t) { S.token = t; store.sset("fdv_token", t); connect(true); refresh(); }
+
+/* ---------- main ---------- */
+const HEAD = {
+  calls: ["Live calls", "Watch conversations as they happen, and step in whenever a caller needs a person."],
+  approvals: ["Approvals", "Sensitive actions the agent wants to take. The caller waits until you decide."],
+  handoffs: ["Handoffs", "Calls the agent passed to a person."],
+  audit: ["Audit log", "Every action taken from this console, newest first."],
+  perf: ["Performance", "How long each stage of a turn takes, across all calls."],
+};
+function paintMain() {
+  const d = S.detail[S.selected];
+  const sig = JSON.stringify([S.view, S.tab, S.selected, S.link, S.auth, S.error, S.sessions, S.closed, S.mgr, S.perf, S.approvals, S.history, S.audit, S.handoffs, d, document.documentElement.dataset.theme]);
+  if (sig === sigMain && $("#main")) return; sigMain = sig;
+  let main = $("#main"); if (!main) { main = h("main", { id: "main", tabindex: "-1" }); $("#app").append(main); }
+  const kids = [];
+  if (S.auth === "needed") kids.push(viewAuth());
+  else {
+    const [t, sub] = HEAD[S.view];
+    kids.push(h("div", { class: "page-h" }, h("div", {}, h("h1", {}, t), h("p", { class: "sub" }, sub)), S.view === "calls" ? summary() : null));
+    if (S.error) kids.push(h("div", { class: "banner bad", role: "alert" }, icon("alert"), S.error + " Showing the last data we had.", h("button", { class: "btn sm", onclick: refresh }, "Retry")));
+    else if (S.link === "down") kids.push(h("div", { class: "banner warn", role: "status" }, icon("alert"), "Live updates are off. The page refreshes every few seconds until the connection returns.", h("button", { class: "btn sm", onclick: () => connect(true) }, "Reconnect")));
+    if (S.view !== "approvals" && S.approvals.length) kids.push(viewApprovals(true));
+    kids.push({ calls: viewCalls, approvals: viewApprovals, handoffs: viewHandoffs, audit: viewAudit, perf: viewPerf }[S.view]());
+  }
+  keepFocus(() => main.replaceChildren(...kids));
+}
+function viewAuth() {
+  const input = h("input", { type: "password", id: "authtok", autocomplete: "off", placeholder: "Paste the operator token", "data-keep": "authtok", "aria-describedby": "autherr" });
+  const err = h("div", { class: "err", id: "autherr", role: "alert" }, S.token ? "That token wasn't accepted. Check it and try again." : "");
+  const go = () => { const t = input.value.trim(); if (!t) { err.textContent = "Enter the operator token to continue."; return; } setToken(t); };
+  input.addEventListener("keydown", (e) => e.key === "Enter" && go());
+  return h("div", { class: "panel auth" }, h("div", { class: "brand" }, h("div", { class: "mark" }, icon("wave")), h("div", {}, "Front Desk Voice", h("small", {}, "Operator console"))),
+    h("h1", {}, "This console needs a token"), h("p", { class: "sub" }, "The server was started with an operator token. Paste it to watch calls and take action. It stays in this browser tab only."),
+    h("div", { class: "field", style: "margin-top:18px" }, h("label", { for: "authtok" }, "Operator token"), input, err),
+    h("button", { class: "btn primary", style: "width:100%;margin-top:6px", onclick: go }, icon("key", "sm"), "Connect"));
+}
+function summary() {
+  const m = S.mgr || {}, p = S.perf || {};
+  const need = S.sessions.filter(needsYou).length;
+  const one = (b, l) => h("div", {}, h("b", {}, b), h("span", {}, l));
+  return h("div", { class: "stats" }, one(m.active != null ? `${m.active}` : "0", `active of ${m.max ?? "n/a"} lines`), one(need, need === 1 ? "call needs you" : "calls need you"),
+    one(p.ttfa ? ms(p.ttfa.p50) : "n/a", "typical time to first audio"), one(p.turns ?? 0, "turns handled"));
+}
+
+/* approvals */
+function viewApprovals(inline) {
+  const items = S.approvals;
+  const rows = items.map((a) => {
+    const note = h("input", { type: "text", "data-keep": "note-" + a.id, placeholder: "Add a note (optional)", maxlength: "200", value: S.notes[a.id] || "", "aria-label": "Note for " + toolName(a.tool), oninput: (e) => S.notes[a.id] = e.target.value });
+    const args = Object.entries(a.args || {});
+    const call = byId(a.session_id);
+    return h("div", { class: "ap" },
+      h("div", {},
+        h("h3", {}, toolName(a.tool)),
+        h("div", { class: "mut" }, call ? h("button", { class: "linkish", onclick: () => { S.view = "calls"; S.selected = a.session_id; refresh(); } }, "Call " + shortId(a.session_id)) : "Call " + shortId(a.session_id), " · the caller is waiting on this", h("span", { class: "faint" }, " · request #" + a.id)),
+        args.length ? h("dl", { class: "args" }, args.map(([k, v]) => [h("dt", {}, humanise(k)), h("dd", {}, val(v))])) : null),
+      h("div", { class: "acts" }, note,
+        h("div", { class: "row" },
+          h("button", { class: "btn hold grow", onclick: () => decide(a, true) }, icon("check", "sm"), "Approve"),
+          h("button", { class: "btn danger grow", onclick: () => decide(a, false) }, icon("x", "sm"), "Reject"))));
+  });
+  const head = h("div", { class: "panel-h" }, h("h2", {}, inline ? `Needs your approval (${items.length})` : "Waiting for a decision"), inline ? null : h("span", { class: "mut" }, items.length ? "Newest first" : ""));
+  if (inline) return h("section", { class: "panel attn", "aria-label": "Needs your approval" }, head, rows);
+  const pending = h("section", { class: "panel" }, head, items.length ? rows : h("div", { class: "empty" }, icon("review"), h("h3", {}, "Nothing is waiting on you"),
+    h("p", {}, "When the agent wants to do something sensitive, such as cancelling an appointment, the request lands here and the caller is held until you decide."),
+    h("p", {}, "Choose which actions need approval with ", h("code", {}, "VA_APPROVAL_TOOLS"), " when you start the server.")));
+  const hist = h("section", { class: "panel", style: "margin-top:18px" }, h("div", { class: "panel-h" }, h("h2", {}, "Recent decisions")),
+    S.history.length ? h("div", { class: "tbl-wrap" }, h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, ["Action", "Call", "Outcome", "Decided by", "Note"].map((c) => h("th", { scope: "col" }, c)))),
+      h("tbody", {}, S.history.slice(0, 30).map((a) => h("tr", {}, h("td", {}, toolName(a.tool)), h("td", { class: "mono" }, shortId(a.session_id)),
+        h("td", {}, h("span", { class: "tag " + (a.status === "approved" ? "ok" : "bad") }, humanise(a.status))), h("td", {}, a.decided_by || "System"), h("td", { class: "mut" }, a.note || ""))))))
+      : h("div", { class: "empty" }, h("p", {}, "No decisions yet.")));
+  return h("div", {}, pending, hist);
+}
+function decide(a, yes) { act(`/api/approvals/${a.id}/${yes ? "approve" : "reject"}`, "POST", { note: S.notes[a.id] || "" }, yes ? "Approved. The agent is carrying on." : "Rejected. The agent will tell the caller.").then(() => delete S.notes[a.id]); }
+
+/* calls */
+function viewCalls() {
+  if (!S.sessions.length && !S.closed.length) return h("section", { class: "panel" }, h("div", { class: "empty" }, icon("phone"), h("h3", {}, "No calls yet"),
+    h("p", {}, "Calls show up here the moment a caller connects. To see one now, start a test call from the caller page, or run ", h("code", {}, "make sim"), " in a terminal."),
+    h("div", { class: "row" }, h("a", { class: "btn primary", href: "/mic", target: "_blank", rel: "noopener" }, icon("ext", "sm"), "Open caller page"))));
+  return h("div", { class: "calls" }, viewList(), viewThread(), viewInspector());
+}
+function viewList() {
+  const list = [...S.sessions].sort(rank);
+  const move = (e, i) => { const j = e.key === "ArrowDown" || e.key === "ArrowRight" ? i + 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? i - 1 : null; if (j == null || !list[j]) return; e.preventDefault(); S.selected = list[j].session_id; S.focusKeep = "call-" + S.selected; loadDetail(S.selected).then(() => { paint(); $(`[data-keep="call-${S.selected}"]`)?.focus(); }); };
+  const items = list.map((s, i) => {
+    const st = s.disconnected ? "disconnected" : s.state;
+    const waiting = S.approvals.some((a) => a.session_id === s.session_id);
+    return h("button", { class: "call", "data-keep": "call-" + s.session_id, "aria-current": s.session_id === S.selected ? "true" : null, onkeydown: (e) => move(e, i), onclick: () => { S.selected = s.session_id; loadDetail(s.session_id).then(paint); } },
+      h("div", { class: "l1" }, h("b", {}, "Call " + shortId(s.session_id)), h("span", { class: "st " + st }, STATE[st] || humanise(st))),
+      h("div", { class: "l2 clip" }, s.activity || (s.turn ? `${s.turn} ${s.turn === 1 ? "turn" : "turns"} so far` : "No turns yet")),
+      (waiting || s.pending_reply || s.escalated || (s.degraded || []).length) ? h("div", { class: "tags" },
+        waiting ? h("span", { class: "tag hold" }, "Approval waiting") : null, s.pending_reply ? h("span", { class: "tag hold" }, "Reply held") : null,
+        s.escalated ? h("span", { class: "tag bad" }, "Escalated") : null, (s.degraded || []).length ? h("span", { class: "tag warn" }, "Degraded: " + s.degraded.join(", ")) : null) : null);
+  });
+  return h("section", { class: "panel lst", "aria-label": "Calls" }, h("div", { class: "panel-h" }, h("h2", {}, `Active calls (${list.length})`)),
+    h("div", { class: "scroll grow", "data-scroll": "list" }, list.length ? h("div", { class: "list" }, items) : h("div", { class: "empty" }, h("p", {}, "No active calls. Ended calls are listed below.")),
+      S.closed.length ? h("details", { class: "ended" }, h("summary", {}, `Ended calls (${S.closed.length})`), S.closed.slice(0, 20).map((c) => h("div", { class: "e" }, h("span", { class: "mono" }, shortId(c.session_id)), h("span", {}, `${c.turns} turns · ${humanise(c.reason)}`)))) : null));
+}
+function viewThread() {
+  const s = byId(S.selected), d = S.detail[S.selected];
+  if (!s) return h("section", { class: "panel" }, h("div", { class: "empty" }, h("h3", {}, "No active call selected"), h("p", {}, "Pick a call from the list, or wait for the next one to connect.")));
+  const st = s.disconnected ? "disconnected" : s.state;
+  const paused = s.state === "paused", took = s.state === "takeover", hand = s.state === "handoff";
+  const canSay = paused || took || hand;
+  const id = s.session_id;
+  const copy = () => navigator.clipboard?.writeText(id).then(() => toast("Call ID copied"), () => toast("Copy isn't available here", true));
+  const head = h("div", { class: "dh" },
+    h("div", { class: "t" }, h("h2", {}, "Call " + shortId(id)), h("span", { class: "st lg " + st, role: "status" }, STATE[st] || humanise(st)),
+      h("span", { class: "mut grow clip" }, s.activity || ""), h("button", { class: "btn sm", onclick: copy, "aria-label": "Copy call ID " + id }, icon("copy", "sm"), "Copy ID")),
+    h("div", { class: "acts" },
+      took ? h("button", { class: "btn primary", onclick: () => act(`/api/sessions/${id}/release`, "POST", null, "Call handed back to the agent.") }, icon("bot", "sm"), "Give back to agent")
+        : h("button", { class: "btn primary", onclick: () => { S.focusSay = true; act(`/api/sessions/${id}/takeover`, "POST", null, "You have the call. The agent is silent."); } }, icon("headset", "sm"), "Take over"),
+      paused || hand ? h("button", { class: "btn", onclick: () => act(`/api/sessions/${id}/resume`, "POST", null, "Agent resumed.") }, icon("play", "sm"), "Resume agent")
+        : took ? null : h("button", { class: "btn", onclick: () => act(`/api/sessions/${id}/pause`, "POST", null, "Agent paused. The caller hears silence.") }, icon("pause", "sm"), "Pause agent"),
+      h("label", { class: "switch", title: "Hold each agent reply until you release it" }, h("input", { type: "checkbox", role: "switch", checked: !!s.review_replies, "data-keep": "review", onchange: (e) => act(`/api/sessions/${id}/review`, "POST", { enabled: e.target.checked }, e.target.checked ? "Replies are held for your review." : "Replies go straight to the caller.") }), "Review replies first")));
+  const items = [];
+  for (const m of d?.transcript || []) items.push({ ts: m.ts || 0, m });
+  for (const t of d?.tool_calls || []) items.push({ ts: t.ts, t });
+  for (const g of d?.guardrails || []) items.push({ ts: g.ts, g });
+  items.sort((a, b) => a.ts - b.ts);
+  const thread = h("div", { class: "thread", "data-scroll": "thread", "data-call": id, role: "log", "aria-live": "polite", "aria-label": "Conversation", tabindex: "0" },
+    items.length ? items.map(bubble) : h("div", { class: "empty", style: "margin:auto" }, icon("wave"), h("h3", {}, "Waiting for the caller"), h("p", {}, "The conversation appears here as it happens, with tool calls and guardrail checks inline.")),
+    s.state === "thinking" && !s.pending_reply ? h("div", { class: "typing", role: "status" }, "Agent is thinking\u2026") : null);
+  return h("section", { class: "panel", "aria-label": "Conversation" }, head, thread, composer(s, canSay));
+}
+function bubble(it) {
+  if (it.t) {
+    const [label, tone] = toolStatus(it.t.status); const key = "t" + it.t.seq;
+    return h("details", { class: "ev " + tone, open: S.open.has(key), ontoggle: (e) => e.target.open ? S.open.add(key) : S.open.delete(key) },
+      h("summary", {}, icon("bolt", "sm"), toolName(it.t.name) + ": " + label + (it.t.replayed ? " (repeat)" : "")),
+      h("div", { class: "b" }, h("span", {}, "Details are masked where they contain personal information.\n"), "args    " + JSON.stringify(it.t.args) + "\nresult  " + JSON.stringify(it.t.result)));
+  }
+  if (it.g) {
+    const g = it.g, key = "g" + g.seq, tone = /block|deny|refuse/.test(g.action || "") ? "bad" : "warn";
+    return h("details", { class: "ev " + tone, open: S.open.has(key), ontoggle: (e) => e.target.open ? S.open.add(key) : S.open.delete(key) },
+      h("summary", {}, icon("shield", "sm"), `Guardrail (${g.layer}): ${humanise(g.category).toLowerCase()}${g.action ? ", " + g.action : ""}`),
+      h("div", { class: "b" }, `layer     ${g.layer}\ncategory  ${g.category}${g.action ? "\naction    " + g.action : ""}${g.tool ? "\ntool      " + g.tool : ""}`));
+  }
+  const m = it.m, role = m.role === "user" ? "caller" : m.role === "operator" ? "operator" : "agent";
+  const who = role === "caller" ? ["user", "Caller"] : role === "operator" ? ["headset", "Operator" + (m.operator && m.operator !== "operator" ? " " + m.operator : "")] : ["bot", "Agent"];
+  return h("div", { class: "turn " + role }, h("div", { class: "who" }, icon(who[0], "sm"), who[1], h("span", { class: "faint" }, clock(m.ts))),
+    h("div", { class: "bubble" + (m.blocked ? " blocked" : "") }, m.text), m.blocked ? h("span", { class: "tag bad" }, "Blocked by a guardrail") : null);
+}
+function composer(s, canSay) {
+  const id = s.session_id, kids = [];
+  if (s.pending_reply) {
+    const pid = s.pending_reply.id;
+    if (S.held[pid] == null) S.held[pid] = s.pending_reply.text;
+    const ta = h("textarea", { id: "held", "data-keep": "held", oninput: (e) => S.held[pid] = e.target.value, onkeydown: (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") release(); }, "aria-describedby": "heldhelp" }); ta.value = S.held[pid];
+    const release = () => act(`/api/sessions/${id}/reply/release`, "POST", { text: ta.value }, "Reply sent to the caller.");
+    kids.push(h("div", { class: "held" }, h("label", { for: "held" }, "The agent's reply is waiting for you"), ta, h("small", { id: "heldhelp", class: "mut" }, "Edit it if you like. The caller hears nothing until you release it."),
+      h("div", { class: "row" }, h("button", { class: "btn primary", onclick: release }, icon("send", "sm"), "Release reply"), h("button", { class: "btn danger", onclick: () => act(`/api/sessions/${id}/reply/discard`, "POST", null, "Reply discarded.") }, "Discard"))));
+  }
+  const text = S.say[id] || "";
+  const send = () => { const t = ($("[data-keep=say]").value || "").trim(); if (t) act(`/api/sessions/${id}/say`, "POST", { text: t }, "Spoken to the caller.").then((r) => { if (r) { S.say[id] = ""; const n = $("[data-keep=say]"); if (n) { n.value = ""; n.focus(); } } }); };
+  const inp = h("input", { type: "text", id: "say", "data-keep": "say", maxlength: "600", disabled: !canSay, placeholder: canSay ? "Type what the caller should hear" : "Take over to speak", autocomplete: "off", oninput: (e) => { S.say[id] = e.target.value; }, onkeydown: (e) => e.key === "Enter" && send() });
+  inp.value = text;
+  kids.push(canSay ? h("div", { class: "say" }, h("div", { class: "field" }, h("label", { for: "say" }, "Speak to the caller as " + S.name), inp), h("button", { class: "btn primary", onclick: send }, icon("send", "sm"), "Speak"))
+    : h("div", { class: "locked-say" }, h("span", {}, "The agent is handling this call. Take over to speak to the caller yourself."),
+      h("button", { class: "btn sm", onclick: () => { S.focusSay = true; act(`/api/sessions/${id}/takeover`, "POST", null, "You have the call. The agent is silent."); } }, icon("headset", "sm"), "Take over")));
+  return h("div", { class: "comp" }, kids);
+}
+
+/* inspector */
+function viewInspector() {
+  const s = byId(S.selected), d = S.detail[S.selected] || {};
+  const turns = (d.turns || []).slice().sort((a, b) => b.turn_id - a.turn_id).slice(0, 10), tools = (d.tool_calls || []).slice().reverse(), gs = (d.guardrails || []).slice().reverse();
+  const tabs = [["timing", "Timing", turns.length], ["tools", "Tools", tools.length], ["guards", "Guardrails", gs.length]];
+  const onkey = (e) => { const i = tabs.findIndex((t) => t[0] === S.tab), j = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : null; if (j == null || !tabs[j]) return; e.preventDefault(); S.tab = tabs[j][0]; paint(); $(`[data-keep="tab-${S.tab}"]`)?.focus(); };
+  const bar = h("div", { class: "tabs", role: "tablist", "aria-label": "Call details" }, tabs.map(([id, label, n]) =>
+    h("button", { role: "tab", id: "tab-" + id, "data-keep": "tab-" + id, "aria-selected": String(S.tab === id), "aria-controls": "panel-insp", tabindex: S.tab === id ? "0" : "-1", onkeydown: onkey, onclick: () => { S.tab = id; paint(); } }, label, h("span", { class: "n" }, n))));
+  let body;
+  if (!s) body = h("div", { class: "empty" }, h("p", {}, "Select a call to see timing, tool calls and guardrail checks."));
+  else if (S.tab === "timing") body = turns.length ? timing(turns) : h("div", { class: "empty" }, h("h3", {}, "No turns timed yet"), h("p", {}, "After the first exchange, each turn shows how long every stage took."));
+  else if (S.tab === "tools") body = tools.length ? tools.map((t) => { const [l, tone] = toolStatus(t.status); return h("div", { class: "ti" }, h("div", { class: "h" }, h("b", {}, toolName(t.name)), h("span", { class: "tag " + tone }, l)),
+    h("dl", { class: "kv" }, h("dt", {}, "args"), h("dd", {}, JSON.stringify(t.args)), h("dt", {}, "result"), h("dd", {}, JSON.stringify(t.result)), h("dt", {}, "took"), h("dd", {}, ms(t.ms)))); })
+    : h("div", { class: "empty" }, h("h3", {}, "No tool calls"), h("p", {}, "When the agent books, checks or cancels something, the call and its masked arguments show here."));
+  else body = gs.length ? gs.map((g) => h("div", { class: "ti" }, h("div", { class: "h" }, h("b", {}, humanise(g.category)), h("span", { class: "tag " + (/block|deny|refuse/.test(g.action || "") ? "bad" : "warn") }, g.action || g.layer)),
+    h("dl", { class: "kv" }, h("dt", {}, "layer"), h("dd", {}, g.layer), g.tool ? [h("dt", {}, "tool"), h("dd", {}, g.tool)] : null, h("dt", {}, "time"), h("dd", {}, clock(g.ts)))))
+    : h("div", { class: "empty" }, h("h3", {}, "No guardrail events"), h("p", {}, "Blocked requests, prompt-injection attempts and permission denials are listed here."));
+  const extra = s && (s.violations || 0) > 0 ? h("div", { class: "note" }, `${s.violations} policy ${s.violations === 1 ? "violation" : "violations"} on this call.`) : null;
+  return h("section", { class: "panel insp", "aria-label": "Call details" }, bar, h("div", { class: "scroll grow", role: "tabpanel", id: "panel-insp", "aria-labelledby": "tab-" + S.tab, "data-scroll": "insp" }, body), extra);
+}
+function timing(turns) {
+  const max = Math.max(...turns.map((t) => t.total_ms || 0), 1);
+  return turns.map((t) => {
+    const slow = [...(t.spans || [])].sort((a, b) => b.dur_ms - a.dur_ms)[0];
+    return h("div", { class: "ti" },
+      h("div", { class: "h" }, h("b", {}, "Turn " + t.turn_id), h("span", { class: "mut" }, `first audio ${ms(t.ttfa_ms)} · total ${ms(t.total_ms)}`)),
+      t.user_text ? h("div", { class: "q" }, "“" + t.user_text + "”") : null,
+      STAGES.map((n) => { const sp = (t.spans || []).filter((x) => x.name === n); if (!sp.length) return null;
+        return h("div", { class: "lane s-" + n, title: sp.map((x) => `${n} ${ms(x.dur_ms)}`).join(", ") }, h("span", {}, STAGE[n]),
+          h("div", { class: "tr", role: "img", "aria-label": `${STAGE[n]} ${ms(sp.reduce((a, x) => a + x.dur_ms, 0))}` }, sp.map((x) => h("i", { style: `left:${Math.min(98, (x.start_ms / max) * 100)}%;width:${Math.max(1.2, (x.dur_ms / max) * 100)}%` }))),
+          h("span", { class: "ms" }, ms(sp.reduce((a, x) => a + x.dur_ms, 0)))); }),
+      h("div", { class: "row", style: "margin-top:6px" }, h("span", { class: "tag" }, humanise(t.outcome)), slow ? h("span", { class: "faint" }, `slowest: ${STAGE[slow.name] || slow.name}`) : null));
+  });
+}
+
+/* other views */
+function viewHandoffs() {
+  if (!S.handoffs.length) return h("section", { class: "panel" }, h("div", { class: "empty" }, icon("handoff"), h("h3", {}, "No handoffs yet"), h("p", {}, "When the agent decides a caller needs a person, for example for urgent symptoms, the request is logged here with its reason and urgency.")));
+  return h("section", { class: "panel" }, h("div", { class: "tbl-wrap" }, h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, ["Time", "Call", "Reason", "Urgency", "Status"].map((c) => h("th", { scope: "col" }, c)))),
+    h("tbody", {}, S.handoffs.map((x) => h("tr", {}, h("td", {}, clockIso(x.created_at)), h("td", {}, byId(x.session_id) ? h("button", { class: "linkish mono", onclick: () => { S.view = "calls"; S.selected = x.session_id; refresh(); } }, shortId(x.session_id)) : h("span", { class: "mono" }, shortId(x.session_id) || "n/a")),
+      h("td", {}, x.reason), h("td", {}, h("span", { class: "tag " + (/urgent|high|emergency/i.test(x.urgency) ? "bad" : "") }, humanise(x.urgency))), h("td", {}, humanise(x.status))))))));
+}
+function viewAudit() {
+  if (!S.audit.length) return h("section", { class: "panel" }, h("div", { class: "empty" }, icon("audit"), h("h3", {}, "No operator actions yet"), h("p", {}, "Pausing, taking over, approving and speaking to a caller are all recorded here with your name and the time.")));
+  return h("section", { class: "panel" }, h("div", { class: "tbl-wrap" }, h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, ["Time", "Operator", "Action", "Call", "Details"].map((c) => h("th", { scope: "col" }, c)))),
+    h("tbody", {}, S.audit.map((a) => { const det = Object.entries(a.details || {}).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${val(v)}`).join(", ").slice(0, 160); return h("tr", {}, h("td", {}, clock(a.ts)), h("td", {}, a.operator), h("td", {}, ACTION[a.action] || humanise(a.action)), h("td", { class: "mono" }, shortId(a.session_id)), h("td", { class: "mut" }, det)); })))));
+}
+function viewPerf() {
+  const p = S.perf || {}, spans = Object.entries(p.spans || {});
+  if (!spans.length && !p.ttfa) return h("section", { class: "panel" }, h("div", { class: "empty" }, icon("trace"), h("h3", {}, "No timings recorded"), h("p", {}, "Once a call has a few turns, the typical (median) and slow (95th percentile) time for each stage appears here.")));
+  const max = Math.max(...spans.map(([, v]) => v.p95), 1);
+  const rows = [...spans.map(([n, v]) => [n, STAGE[n] || n, v]), ...(p.ttfa ? [["ttfa", "Time to first audio", p.ttfa]] : [])];
+  return h("section", { class: "panel" }, h("div", { class: "tbl-wrap" }, h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, [["Stage"], ["Typical (median)", 1], ["Slow (95th percentile)", 1], ["Spread"], ["Samples", 1]].map(([c, n]) => h("th", { scope: "col", class: n ? "num" : "" }, c)))),
+    h("tbody", {}, rows.map(([n, label, v]) => h("tr", {}, h("td", {}, h("b", {}, label)), h("td", { class: "num" }, ms(v.p50)), h("td", { class: "num" }, ms(v.p95)),
+      h("td", { style: "min-width:160px" }, h("div", { class: "lane s-" + n, style: "grid-template-columns:1fr" }, h("div", { class: "tr", role: "img", "aria-label": `median ${ms(v.p50)}, slow ${ms(v.p95)}` }, h("i", { style: `left:0;width:${Math.max(2, (v.p95 / max) * 100)}%;opacity:.35` }), h("i", { style: `left:0;width:${Math.max(2, (v.p50 / max) * 100)}%` })))), h("td", { class: "num mut" }, v.n)))))));
+}
+
+/* ---------- boot ---------- */
+connect(); refresh(); setInterval(refresh, 3000);
 </script>
 </body>
 </html>

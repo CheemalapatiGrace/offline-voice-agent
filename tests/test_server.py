@@ -39,8 +39,8 @@ def test_health_endpoint_reports_status_and_backends(app_client):
 
 
 def test_static_pages_are_served(app_client):
-    assert "Operator Console" in app_client.get("/dashboard").text
-    assert "Clinic voice agent" in app_client.get("/mic").text
+    assert "Operator console" in app_client.get("/dashboard").text
+    assert "Talk to the front desk" in app_client.get("/mic").text
     assert app_client.get("/", follow_redirects=False).status_code in (302, 307)
 
 
